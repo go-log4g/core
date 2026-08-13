@@ -14,7 +14,7 @@ func NewDefaultConfiguration() *Configuration {
 	statusLogger := NewStatusLogger()
 	patternParser := NewPatternParser(statusLogger)
 	layout := NewPatternLayout(defaultPattern, patternParser)
-	console := NewConsoleAppender(os.Stdout, layout)
+	console := NewConsoleAppender(os.Stdout, layout, nil)
 
 	configuration := NewConfiguration()
 	configuration.Root = NewLoggerConfig("", slog.LevelError, "console")

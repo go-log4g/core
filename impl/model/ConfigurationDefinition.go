@@ -1,7 +1,8 @@
 package model
 
 type ConfigurationDefinition struct {
-	Root      LoggerDefinition              `yaml:"root"`
-	Loggers   map[string]LoggerDefinition   `yaml:"loggers"`
-	Appenders map[string]AppenderDefinition `yaml:"appenders"`
+	Properties map[string]string             `yaml:"properties"`
+	Appenders  map[string]AppenderDefinition `yaml:"appenders"`
+	Root       LoggerDefinition              `yaml:"root"`
+	Loggers    map[string]LoggerDefinition   `yaml:"loggers"`
 }

@@ -9,12 +9,21 @@ import (
 func init() {
 	statusLogger := impl.NewStatusLogger()
 
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			statusLogger.Error("Failed to configure log4g: %v; using default configuration", recovered)
+			install(impl.NewDefaultConfiguration())
+		}
+	}()
+
 	loader := impl.NewConfigurationLoader(statusLogger)
 	definition := loader.Load()
 
 	builder := impl.NewConfigurationBuilder(statusLogger)
-	configuration := builder.Build(definition)
+	install(builder.Build(definition))
+}
 
+func install(configuration *impl.Configuration) {
 	callerResolver := impl.NewCallerResolver()
 	callerContextResolver := impl.NewCallerContextResolver(callerResolver, configuration)
 	callerContextCache := impl.NewCallerContextCache(callerContextResolver)
