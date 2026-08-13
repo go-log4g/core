@@ -84,3 +84,12 @@ func loadParameters() map[string]string {
 
 	return result
 }
+
+func (this *Substitutor) RootLevel() string {
+	if value, ok := this.parameters["log4g.level"]; ok {
+		return value
+	} else if value, ok := this.environment["LOG4G_LEVEL"]; ok {
+		return value
+	}
+	return ""
+}

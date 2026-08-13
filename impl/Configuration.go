@@ -14,9 +14,9 @@ type Configuration struct {
 
 func NewConfiguration() *Configuration {
 	return &Configuration{
-		Root:         NewLoggerConfig("", slog.LevelInfo),
+		Root:         NewLoggerConfig("", slog.LevelError),
 		Appenders:    make(map[string]Appender),
-		MinimumLevel: slog.LevelInfo,
+		MinimumLevel: slog.LevelError,
 	}
 }
 

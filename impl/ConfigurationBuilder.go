@@ -30,9 +30,9 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 
 	substitutor := substitution.NewSubstitutor(definition.Properties)
 	configuration := NewConfiguration()
-	configuration.Root = NewLoggerConfig("", this.parseLevel(substitutor.Substitute(definition.Root.Level)), definition.Root.Appenders...)
+	configuration.Root = NewLoggerConfig("", this.rootLevel(definition, substitutor), definition.Root.Appenders...)
 	for name, loggerDefinition := range definition.Loggers {
-		loggerConfig := NewLoggerConfig(name, this.parseLevel(substitutor.Substitute(loggerDefinition.Level)), loggerDefinition.Appenders...)
+		loggerConfig := NewLoggerConfig(name, configuration.Root.Level, loggerDefinition.Appenders...)
 		if loggerDefinition.Additive != nil {
 			loggerConfig.Additive = *loggerDefinition.Additive
 		}
@@ -47,6 +47,7 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 		}
 		return left.Name < right.Name
 	})
+	this.resolveLoggerLevels(configuration, definition.Loggers, substitutor)
 
 	patternParser := NewPatternParser(this.statusLogger)
 	for name, appenderDefinition := range definition.Appenders {
@@ -60,11 +61,11 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 	return configuration
 }
 
-func (this *ConfigurationBuilder) parseLevel(value string) slog.Level {
+func parseLevel(value string) slog.Level {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "DEBUG":
 		return slog.LevelDebug
-	case "INFO", "":
+	case "INFO":
 		return slog.LevelInfo
 	case "WARN":
 		return slog.LevelWarn
@@ -147,6 +148,37 @@ func (this *ConfigurationBuilder) parseRequiredLevel(value, property string) slo
 		panic(fmt.Errorf("unsupported log level %q for %s", value, property))
 	}
 }
+
+func (this *ConfigurationBuilder) rootLevel(definition *model.ConfigurationDefinition, substitutor *substitution.Substitutor) slog.Level {
+	if strings.TrimSpace(definition.Root.Level) != "" {
+		return parseLevel(substitutor.Substitute(definition.Root.Level))
+	} else if value := substitutor.RootLevel(); value != "" {
+		return parseLevel(value)
+	}
+	return slog.LevelError
+}
+
+func (this *ConfigurationBuilder) resolveLoggerLevels(configuration *Configuration, definitions map[string]model.LoggerDefinition, substitutor *substitution.Substitutor) {
+	for _, logger := range configuration.Loggers {
+		definition := definitions[logger.Name]
+
+		if strings.TrimSpace(definition.Level) != "" {
+			logger.Level = parseLevel(substitutor.Substitute(definition.Level))
+			continue
+		}
+
+		for _, parent := range configuration.Loggers {
+			if parent.Name == logger.Name || !strings.HasPrefix(logger.Name, parent.Name+"/") {
+				continue
+			}
+			if strings.TrimSpace(definitions[parent.Name].Level) != "" {
+				logger.Level = parent.Level
+				break
+			}
+		}
+	}
+}
+
 func (this *ConfigurationBuilder) minimumLevel(configuration *Configuration) slog.Level {
 	result := configuration.Root.Level
 

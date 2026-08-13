@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/go-log4g/core/impl/substitution"
 )
 
 const defaultPattern = "%m%n"
@@ -16,9 +18,15 @@ func NewDefaultConfiguration() *Configuration {
 	layout := NewPatternLayout(defaultPattern, patternParser)
 	console := NewConsoleAppender(os.Stdout, layout, nil)
 
+	substitutor := substitution.NewSubstitutor(nil)
+	rootLevel := slog.LevelError
+	if value := substitutor.RootLevel(); value != "" {
+		rootLevel = parseLevel(value)
+	}
+
 	configuration := NewConfiguration()
-	configuration.Root = NewLoggerConfig("", slog.LevelError, "console")
-	configuration.MinimumLevel = slog.LevelError
+	configuration.Root = NewLoggerConfig("", rootLevel, "console")
+	configuration.MinimumLevel = rootLevel
 	configuration.Appenders["console"] = console
 
 	return configuration

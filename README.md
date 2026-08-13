@@ -7,54 +7,6 @@ It configures `slog`; it does not replace it. Applications can use
 standard `slog` directly or the optional `log4g` facade for `{}`
 parameterized messages.
 
-## Configuration
-
-Create `config/log4g.yaml`:
-
-``` yaml
-appenders:
-  console:
-    type: console
-    target: stdout
-    layout:
-      type: pattern
-      pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c.%M:%L - %m%n"
-
-root:
-  level: warn
-  appenders:
-    - console
-
-loggers:
-  playground/internal/app:
-    level: debug
-
-  github.com/go-beans/go/ioc:
-    level: debug
-```
-
-This configuration writes to `stdout`, sets the default level to `WARN`,
-and enables `DEBUG` for the two configured logger hierarchies.
-
-Example output:
-
-``` text
-2026-08-13 12:34:56.789 INFO  playground/internal/app/Service1.AfterPropertiesSet:23 - Service initialized
-```
-
-Logger configuration is hierarchical. For example:
-
-``` text
-playground/internal/app
-```
-
-also matches:
-
-``` text
-playground/internal/app/Service1
-playground/internal/app/service/UserService
-```
-
 ## Initialization
 
 Import `core` early in the application so logging is configured before
@@ -84,7 +36,108 @@ log4g.Info("User {} authenticated", 123)
 log4g.Debug("Loaded {} records in {}", count, elapsed)
 ```
 
-## Pattern layout
+## Configuration
+
+Create `config/log4g.yaml`:
+
+``` yaml
+properties:
+  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c.%M:%L - %m%n"
+
+appenders:
+  stdout:
+    type: console
+    target: stdout
+    filter:
+      type: levelRange
+      minLevel: debug
+      maxLevel: warn
+    layout:
+      type: pattern
+      pattern: "${pattern}"
+
+  stderr:
+    type: console
+    target: stderr
+    filter:
+      type: threshold
+      level: error
+    layout:
+      type: pattern
+      pattern: "${pattern}"
+
+root:
+  level: error
+  appenders:
+    - stdout
+    - stderr
+
+loggers:
+  playground/internal/app:
+    level: debug
+
+  github.com/go-beans/go/ioc:
+    level: info
+```
+
+This configuration writes `DEBUG` through `WARN` events to `stdout` and
+`ERROR` events to `stderr`. The root level is `ERROR`, while configured
+logger hierarchies can override or inherit their effective level.
+
+### Logger levels
+
+Logger levels are inherited hierarchically. A logger without an explicit
+level inherits the level of its nearest configured parent, falling back
+to the root logger.
+
+If the root logger has no explicit level, `--log4g.level` is used when
+provided, followed by the `LOG4G_LEVEL` environment variable. If none is
+configured, the root level defaults to `ERROR`.
+
+### Properties
+
+Configuration properties can be defined once and reused:
+
+```yaml
+properties:
+  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c.%M:%L - %m%n"
+```
+
+Properties, environment variables, and application parameters use
+separate namespaces:
+
+```
+${pattern}          Configuration property
+${env:LOG_PATTERN}  Environment variable
+${arg:log.pattern}  Application parameter
+```
+
+Application parameters use the following form:
+
+```
+--log.pattern=value
+```
+
+Substitution is recursive, so a configuration property may itself
+reference another property, environment variable, or application
+parameter.
+
+### Loggers 
+
+Loggers configuration is hierarchical. For example:
+
+``` text
+playground/internal/app
+```
+
+also matches:
+
+``` text
+playground/internal/app/Service1
+playground/internal/app/service/UserService
+```
+
+### Pattern layout
 
 The configured pattern:
 
@@ -158,7 +211,7 @@ Examples:
 → {requestId=8f24..., userId=123}
 ```
 
-## Width and alignment
+### Width and alignment
 
 A minimum width can be specified before a converter:
 
@@ -182,31 +235,26 @@ WARN
 ERROR
 ```
 
-Width is also useful for optional MDC values:
+Width is also useful for optional MDC values. For example, a compact
+request ID can use the last UUID section:
 
-``` text
-[%36X{requestId}]
+```text
+[%12X{requestId}]
 ```
 
 With a request ID:
 
 ``` text
-[550e8400-e29b-41d4-a716-446655440000]
+[446655440000]
 ```
 
 Without a request ID:
 
 ``` text
-[                                    ]
+[            ]
 ```
 
-Use `-` for left alignment:
-
-``` text
-[%-36X{requestId}]
-```
-
-## Logger name precision
+### Logger name precision
 
 Given:
 
@@ -229,7 +277,7 @@ the following patterns produce:
 Positive precision keeps rightmost components. Negative precision
 removes components from the left.
 
-## Logger name abbreviation
+### Logger name abbreviation
 
 Given:
 
