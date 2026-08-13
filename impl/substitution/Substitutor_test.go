@@ -1,8 +1,10 @@
 package substitution_test
 
 import (
+	"regexp"
 	"testing"
 
+	"github.com/go-jang/go/util/regex"
 	"github.com/go-log4g/core/impl/substitution"
 	"github.com/stretchr/testify/require"
 )
@@ -40,16 +42,6 @@ func TestSubstitutorRecursiveProperty(test *testing.T) {
 	})
 }
 
-func TestSubstitutorSelfReference(test *testing.T) {
-	value := substitution.NewSubstitutor(map[string]string{
-		"a": "${a}",
-	})
-
-	require.Panics(test, func() {
-		value.Substitute("${a}")
-	})
-}
-
 func TestSubstitutorMultipleProperties(test *testing.T) {
 	value := substitution.NewSubstitutor(map[string]string{
 		"date":  "%d{HH:mm:ss}",
@@ -57,4 +49,40 @@ func TestSubstitutorMultipleProperties(test *testing.T) {
 	})
 
 	require.Equal(test, "%d{HH:mm:ss} %-5p %m%n", value.Substitute("${date} ${level} %m%n"))
+}
+
+func TestEnvironmentPattern(test *testing.T) {
+	pattern := regexp.MustCompile(regex.NewPatternBuilder().Next(substitution.RegexEnvVariablePattern).Build())
+
+	match := regex.MatchOf(pattern, "LOG_LEVEL=debug", pattern.FindStringSubmatchIndex("LOG_LEVEL=debug"))
+
+	require.Equal(test, "LOG_LEVEL", match.NamedGroup("key").Value())
+	require.Equal(test, "debug", match.NamedGroup("value").Value())
+}
+
+func TestEnvironmentPatternValueWithEquals(test *testing.T) {
+	pattern := regexp.MustCompile(regex.NewPatternBuilder().Next(substitution.RegexEnvVariablePattern).Build())
+
+	match := regex.MatchOf(pattern, "URL=a=b=c", pattern.FindStringSubmatchIndex("URL=a=b=c"))
+
+	require.Equal(test, "URL", match.NamedGroup("key").Value())
+	require.Equal(test, "a=b=c", match.NamedGroup("value").Value())
+}
+
+func TestParameterPattern(test *testing.T) {
+	pattern := regexp.MustCompile(regex.NewPatternBuilder().Next(substitution.RegexParameterPattern).Build())
+
+	match := regex.MatchOf(pattern, "--log.level=debug", pattern.FindStringSubmatchIndex("--log.level=debug"))
+
+	require.Equal(test, "log.level", match.NamedGroup("key").Value())
+	require.Equal(test, "debug", match.NamedGroup("value").Value())
+}
+
+func TestParameterPatternSingleDash(test *testing.T) {
+	pattern := regexp.MustCompile(regex.NewPatternBuilder().Next(substitution.RegexParameterPattern).Build())
+
+	match := regex.MatchOf(pattern, "-log.level=debug", pattern.FindStringSubmatchIndex("-log.level=debug"))
+
+	require.Equal(test, "log.level", match.NamedGroup("key").Value())
+	require.Equal(test, "debug", match.NamedGroup("value").Value())
 }

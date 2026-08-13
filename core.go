@@ -3,18 +3,16 @@ package core
 import (
 	"log/slog"
 
+	"github.com/go-errr/go/err"
 	"github.com/go-log4g/core/impl"
 )
 
 func init() {
 	statusLogger := impl.NewStatusLogger()
-
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			statusLogger.Error("Failed to configure log4g: %v; using default configuration", recovered)
-			install(impl.NewDefaultConfiguration())
-		}
-	}()
+	defer err.Recover(func(e any) {
+		statusLogger.Error("Failed to configure Log4g: %v; using default configuration", e)
+		install(impl.NewDefaultConfiguration())
+	})
 
 	loader := impl.NewConfigurationLoader(statusLogger)
 	definition := loader.Load()
