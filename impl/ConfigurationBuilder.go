@@ -28,7 +28,7 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 		return NewDefaultConfiguration()
 	}
 
-	substitutor := substitution.NewSubstitutor(definition.Properties)
+	substitutor.SetProperties(definition.Properties)
 	configuration := NewConfiguration()
 	configuration.Root = NewLoggerConfig("", this.rootLevel(definition, substitutor), definition.Root.Appenders...)
 	for name, loggerDefinition := range definition.Loggers {

@@ -12,13 +12,14 @@ import (
 
 const defaultPattern = "%m%n"
 
+var substitutor = substitution.NewSubstitutor()
+
 func NewDefaultConfiguration() *Configuration {
 	statusLogger := NewStatusLogger()
 	patternParser := NewPatternParser(statusLogger)
 	layout := NewPatternLayout(defaultPattern, patternParser)
 	console := NewConsoleAppender(os.Stdout, layout, nil, statusLogger)
 
-	substitutor := substitution.NewSubstitutor(nil)
 	rootLevel := slog.LevelError
 	if value := substitutor.RootLevel(); value != "" {
 		rootLevel = parseLevel(value)

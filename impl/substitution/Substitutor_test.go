@@ -10,7 +10,8 @@ import (
 )
 
 func TestSubstitutor(test *testing.T) {
-	value := substitution.NewSubstitutor(map[string]string{
+	value := substitution.NewSubstitutor()
+	value.SetProperties(map[string]string{
 		"pattern":   "${timestamp} %-5p %c.%M:%L - %m%n",
 		"timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC}",
 	})
@@ -22,7 +23,8 @@ func TestSubstitutor(test *testing.T) {
 }
 
 func TestSubstitutorUndefinedProperty(test *testing.T) {
-	value := substitution.NewSubstitutor(map[string]string{
+	value := substitution.NewSubstitutor()
+	value.SetProperties(map[string]string{
 		"pattern": "${unknown}",
 	})
 
@@ -32,7 +34,8 @@ func TestSubstitutorUndefinedProperty(test *testing.T) {
 }
 
 func TestSubstitutorRecursiveProperty(test *testing.T) {
-	value := substitution.NewSubstitutor(map[string]string{
+	value := substitution.NewSubstitutor()
+	value.SetProperties(map[string]string{
 		"a": "${b}",
 		"b": "${a}",
 	})
@@ -43,7 +46,8 @@ func TestSubstitutorRecursiveProperty(test *testing.T) {
 }
 
 func TestSubstitutorMultipleProperties(test *testing.T) {
-	value := substitution.NewSubstitutor(map[string]string{
+	value := substitution.NewSubstitutor()
+	value.SetProperties(map[string]string{
 		"date":  "%d{HH:mm:ss}",
 		"level": "%-5p",
 	})

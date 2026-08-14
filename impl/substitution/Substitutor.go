@@ -20,9 +20,8 @@ type Substitutor struct {
 	processor   *regex.PatternProcessor
 }
 
-func NewSubstitutor(properties map[string]string) *Substitutor {
+func NewSubstitutor() *Substitutor {
 	result := &Substitutor{
-		properties:  properties,
 		environment: loadEnvironment(),
 		parameters:  loadParameters(),
 	}
@@ -33,6 +32,10 @@ func NewSubstitutor(properties map[string]string) *Substitutor {
 	})
 
 	return result
+}
+
+func (this *Substitutor) SetProperties(properties map[string]string) {
+	this.properties = properties
 }
 
 func (this *Substitutor) Substitute(value string) string {
@@ -89,6 +92,16 @@ func (this *Substitutor) RootLevel() string {
 	if value, ok := this.parameters["log4g.level"]; ok {
 		return value
 	} else if value, ok := this.environment["LOG4G_LEVEL"]; ok {
+		return value
+	}
+	return ""
+}
+
+func (this *Substitutor) ConfigurationFile() string {
+	if value, ok := this.parameters["log4g.configurationFile"]; ok {
+		return value
+	}
+	if value, ok := this.environment["LOG4G_CONFIGURATION_FILE"]; ok {
 		return value
 	}
 	return ""

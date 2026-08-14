@@ -50,7 +50,7 @@ func (this *ConfigurationLoader) Load() *model.ConfigurationDefinition {
 func (this *ConfigurationLoader) paths() []string {
 	result := make([]string, 0, 3)
 
-	if path := os.Getenv("LOG4G_CONFIGURATION_FILE"); path != "" {
+	if path := substitutor.ConfigurationFile(); path != "" {
 		result = append(result, path)
 	}
 

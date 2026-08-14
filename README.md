@@ -31,8 +31,8 @@ libraries that may log during their initialization.
 During initialization, Log4g searches for a configuration file in this
 order:
 
-- The file specified by the `LOG4G_CONFIGURATION_FILE` environment
-variable, if set.
+- The file specified by the `--log4g.configurationFile` command-line property
+- The file specified by the `LOG4G_CONFIGURATION_FILE` environment variable
 - config/log4g.yaml
 - log4g.yaml
 
