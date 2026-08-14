@@ -12,8 +12,8 @@ type testAppender struct {
 	name string
 }
 
-func (this *testAppender) Append(event *impl.LogEvent) error {
-	return nil
+func (this *testAppender) Append(event *impl.LogEvent) {
+	return
 }
 
 func TestConfigurationResolveLoggerConfig(test *testing.T) {

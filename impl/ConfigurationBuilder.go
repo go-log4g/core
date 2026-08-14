@@ -78,24 +78,53 @@ func parseLevel(value string) slog.Level {
 
 func (this *ConfigurationBuilder) buildAppender(name string, definition model.AppenderDefinition, parser *PatternParser, substitutor *substitution.Substitutor) Appender {
 	appenderType := strings.ToLower(substitutor.Substitute(definition.Type))
-	target := strings.ToLower(substitutor.Substitute(definition.Target))
 	layout := this.buildLayout(definition.Layout, parser, substitutor)
 	appenderFilter := this.buildFilter(definition.Filter, substitutor)
 
 	switch appenderType {
 	case "console":
-		switch target {
-		case "", "stdout":
-			return NewConsoleAppender(os.Stdout, layout, appenderFilter)
-		case "stderr":
-			return NewConsoleAppender(os.Stderr, layout, appenderFilter)
-		default:
-			panic(fmt.Sprintf("unsupported target %q for appender %q", target, name))
-		}
-
+		return this.buildConsoleAppender(name, definition, layout, appenderFilter, substitutor)
+	case "file":
+		return this.buildFileAppender(name, definition, layout, appenderFilter, substitutor)
 	default:
 		panic(fmt.Sprintf("unsupported appender type %q for appender %q", appenderType, name))
 	}
+}
+
+func (this *ConfigurationBuilder) buildConsoleAppender(name string, definition model.AppenderDefinition, layout Layout, appenderFilter filter.Filter, substitutor *substitution.Substitutor) Appender {
+	target := strings.ToLower(substitutor.Substitute(definition.Target))
+
+	switch target {
+	case "", "stdout":
+		return NewConsoleAppender(os.Stdout, layout, appenderFilter, this.statusLogger)
+	case "stderr":
+		return NewConsoleAppender(os.Stderr, layout, appenderFilter, this.statusLogger)
+	default:
+		panic(fmt.Sprintf("unsupported target %q for appender %q", target, name))
+	}
+}
+
+func (this *ConfigurationBuilder) buildFileAppender(name string, definition model.AppenderDefinition, layout Layout, appenderFilter filter.Filter, substitutor *substitution.Substitutor) Appender {
+	file := substitutor.Substitute(definition.File)
+	lang.Assert(strings.TrimSpace(file) != "", "file is required for appender %q", name)
+
+	append := true
+	if definition.Append != nil {
+		append = *definition.Append
+	}
+
+	bufferSize := 8192
+	if definition.BufferSize != nil {
+		bufferSize = *definition.BufferSize
+	}
+	lang.Assert(bufferSize > 0, "bufferSize must be positive for appender %q", name)
+
+	immediateFlush := true
+	if definition.ImmediateFlush != nil {
+		immediateFlush = *definition.ImmediateFlush
+	}
+
+	return NewFileAppender(file, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger)
 }
 
 func (this *ConfigurationBuilder) buildLayout(definition model.LayoutDefinition, parser *PatternParser, substitutor *substitution.Substitutor) Layout {

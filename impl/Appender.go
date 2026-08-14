@@ -1,5 +1,5 @@
 package impl
 
 type Appender interface {
-	Append(event *LogEvent) error
+	Append(event *LogEvent)
 }

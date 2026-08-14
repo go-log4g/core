@@ -9,27 +9,47 @@ parameterized messages.
 
 ## Initialization
 
-Import `core` early in the application so logging is configured before
-other application packages initialize:
+`go-log4g` configures the standard `log/slog` logger automatically when
+the `core` package is initialized.
 
-``` go
+Import `core` as a blank import and place it in a separate import group
+at the top:
+
+```go
 import (
     _ "github.com/go-log4g/core"
 
     "log/slog"
+
+    "myapp/internal/service"
 )
 ```
+The separate import group makes the initialization dependency explicit:
+Log4g should be initialized before application packages and other
+libraries that may log during their initialization.
 
-Use standard `slog` normally:
+During initialization, Log4g searches for a configuration file in this
+order:
 
-``` go
+- The file specified by the `LOG4G_CONFIGURATION_FILE` environment
+variable, if set.
+- config/log4g.yaml
+- log4g.yaml
+
+The first existing configuration file is loaded.  
+If no configuration file is found, Log4g installs its default
+configuration and logs ERROR and higher events to the console.  
+If a configuration file is found but cannot be read, parsed, or
+processed, Log4g reports the error to stderr and falls back to the
+default configuration.  
+
+Once initialized, use standard slog normally:
+```
 slog.Info("Application started")
 slog.Debug("Loading user", "userId", 123)
 ```
-
-Or use the optional `log4g` facade:
-
-``` go
+Or use the optional log4g facade for {} parameterized messages:
+```
 import "github.com/go-log4g/core/log4g"
 
 log4g.Info("User {} authenticated", 123)
@@ -66,11 +86,22 @@ appenders:
       type: pattern
       pattern: "${pattern}"
 
+  file:
+    type: file
+    file: logs/application.log
+    # append: false
+    # bufferSize: 8192
+    # immediateFlush: false
+    layout:
+      type: pattern
+      pattern: "${pattern}"
+
 root:
   level: error
   appenders:
     - stdout
     - stderr
+    - file
 
 loggers:
   playground/internal/app:
