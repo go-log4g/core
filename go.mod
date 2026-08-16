@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/go-errr/go v1.0.13
-	github.com/go-jang/go v1.0.2
+	github.com/go-jang/go v1.0.3
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )

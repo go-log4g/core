@@ -1,9 +1,7 @@
 # go-log4g
 
-`go-log4g` provides Log4j-style configuration and pattern layouts for
-Go's standard `log/slog` logging facade.
-
-It configures `slog`; it does not replace it. Applications can use
+Log4g provides Log4j-style configuration and pattern layouts for
+Go's standard `log/slog` logging facade. Applications can use
 standard `slog` directly or the optional `log4g` facade for `{}`
 parameterized messages.
 
@@ -88,10 +86,30 @@ appenders:
 
   file:
     type: file
-    file: logs/application.log
-    # append: false
+    file: logs/file.log
+    # append: true
+    # immediateFlush: true
     # bufferSize: 8192
-    # immediateFlush: false
+    layout:
+      type: pattern
+      pattern: "${pattern}"
+
+  rollingFile:
+    type: rollingFile
+    file: logs/rollingFile.log
+    filePattern: logs/rollingFile-%d{yyyyMMdd}-%i.log
+    # append: true
+    # immediateFlush: true
+    # bufferSize: 8192
+
+    policies:
+      timeBasedTriggeringPolicy:
+        interval: 1
+        # modulate: false
+      sizeBasedTriggeringPolicy:
+        size: 10MB
+    # defaultRolloverStrategy:
+    #   max: 7
     layout:
       type: pattern
       pattern: "${pattern}"
@@ -102,6 +120,7 @@ root:
     - stdout
     - stderr
     - file
+    - rollingFile
 
 loggers:
   playground/internal/app:
@@ -153,6 +172,99 @@ Substitution is recursive, so a configuration property may itself
 reference another property, environment variable, or application
 parameter.
 
+### File appenders
+
+`file` writes log events to a file:
+
+```yaml
+file:
+  type: file
+  file: logs/application.log
+  # append: true
+  # immediateFlush: true
+  # bufferSize: 8192
+  layout:
+    type: pattern
+    pattern: "${pattern}"
+```
+
+`append` controls whether an existing file is appended to or truncated
+when the appender is created. The default is true.
+
+`immediateFlush` controls whether each log event is written immediately.
+The default is true. When disabled, Log4g uses buffered asynchronous
+file writes.
+
+`bufferSize` specifies the size of each write buffer in bytes. The
+default is 8192. Buffered file appenders use two fixed-size buffers so
+logging remains memory-bounded. If file output cannot keep up with log
+production, writers are blocked rather than allocating an unbounded
+queue or dropping log events.
+
+File writes are synchronized fairly, preserving the order in which
+concurrent log operations acquire the appender for writing.
+
+### Rolling file appenders
+
+`rollingFile` extends file output with size- and time-based rollover:
+
+```yaml
+rollingFile:
+  type: rollingFile
+  file: logs/application.log
+  filePattern: logs/application-%d{yyyyMMdd}-%i.log
+  # append: true
+  # immediateFlush: true
+  # bufferSize: 8192
+
+  policies:
+    timeBasedTriggeringPolicy:
+      # interval: 1
+      # modulate: false
+    sizeBasedTriggeringPolicy:
+      # size: 10MB
+  # defaultRolloverStrategy:
+  #   max: 7
+
+  layout:
+    type: pattern
+    pattern: "${pattern}"
+```
+
+`file` is the active log file. `filePattern` specifies the names of
+rolled files. `%d{...}` inserts the rollover period and `%i` inserts the
+rollover index.
+
+`sizeBasedTriggeringPolicy` rolls the active file when it reaches the
+configured size. The default size is `10MB`. Supported units are `K`,
+`KB`, `M`, `MB`, `G`, `GB`, `T`, and `TB`; fractional values such as
+`1.5MB` are supported.
+
+`interval` defaults to `1`. An interval of `5` with a minute-based file
+pattern rolls every five minutes.
+
+`modulate` defaults to `false`. When enabled, rollover intervals are
+aligned to natural time boundaries. For example, a five-minute policy
+started at `10:07` rolls at `10:10`, `10:15`, `10:20`, and so on.
+
+When multiple triggering policies are configured, rollover occurs when
+any policy triggers.
+
+`defaultRolloverStrategy.max` defaults to `7`. Index `1` is the oldest
+retained rolled file and the maximum index is the newest. Once the
+maximum number of files for a rollover period is reached, the oldest
+file is removed and the remaining indexes are shifted down.
+
+For example:
+
+```
+application.log               active
+application-20260817-1.log    oldest
+application-20260817-2.log
+...
+application-20260817-7.log    newest
+```
+
 ### Loggers 
 
 Loggers configuration is hierarchical. For example:
@@ -180,6 +292,58 @@ produces output such as:
 
 ``` text
 2026-08-13 12:34:56.789 INFO  playground/internal/app/Service1.AfterPropertiesSet:23 - Service initialized
+```
+
+### Date/time formats
+
+`%d` accepts either a Java-style date/time pattern or one of the
+predefined formats.
+
+Without an explicit format, `DEFAULT` is used:
+
+```
+%d
+%d{DEFAULT}
+→ 2026-08-17 12:34:56,789
+```
+
+Supported predefined formats:
+
+```
+DEFAULT
+→ 2026-08-17 12:34:56,789
+
+ISO8601
+→ 2026-08-17T12:34:56,789
+
+ISO8601_BASIC
+→ 20260817T123456,789
+
+ABSOLUTE
+→ 12:34:56,789
+
+DATE
+→ 17 Aug 2026 12:34:56,789
+
+COMPACT
+→ 20260817123456789
+```
+
+Custom Java-style patterns are also supported:
+
+```
+%d{yyyy-MM-dd HH:mm:ss.SSS}
+→ 2026-08-17 12:34:56.789
+
+%d{yyyyMMdd-HHmmss}
+→ 20260817-123456
+```
+
+A timezone can be supplied as the second date option:
+
+```
+%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC}
+→ 2026-08-17 12:34:56.789
 ```
 
 ### Supported patterns

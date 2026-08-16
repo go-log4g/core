@@ -9,7 +9,9 @@ import (
 
 	"github.com/go-jang/go/lang"
 	"github.com/go-log4g/core/impl/filter"
+	"github.com/go-log4g/core/impl/format"
 	"github.com/go-log4g/core/impl/model"
+	"github.com/go-log4g/core/impl/rolling"
 	"github.com/go-log4g/core/impl/substitution"
 )
 
@@ -86,6 +88,8 @@ func (this *ConfigurationBuilder) buildAppender(name string, definition model.Ap
 		return this.buildConsoleAppender(name, definition, layout, appenderFilter, substitutor)
 	case "file":
 		return this.buildFileAppender(name, definition, layout, appenderFilter, substitutor)
+	case "rollingfile":
+		return this.buildRollingFileAppender(name, definition, layout, appenderFilter, substitutor)
 	default:
 		panic(fmt.Sprintf("unsupported appender type %q for appender %q", appenderType, name))
 	}
@@ -125,6 +129,78 @@ func (this *ConfigurationBuilder) buildFileAppender(name string, definition mode
 	}
 
 	return NewFileAppender(file, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger)
+}
+
+func (this *ConfigurationBuilder) buildRollingFileAppender(name string, definition model.AppenderDefinition, layout Layout, appenderFilter filter.Filter, substitutor *substitution.Substitutor) Appender {
+	file := substitutor.Substitute(definition.File)
+	lang.Assert(strings.TrimSpace(file) != "", "file is required for appender %q", name)
+
+	filePattern := substitutor.Substitute(definition.FilePattern)
+	lang.Assert(strings.TrimSpace(filePattern) != "", "filePattern is required for appender %q", name)
+
+	append := true
+	if definition.Append != nil {
+		append = *definition.Append
+	}
+
+	bufferSize := 8192
+	if definition.BufferSize != nil {
+		bufferSize = *definition.BufferSize
+	}
+	lang.Assert(bufferSize > 0, "bufferSize must be positive for appender %q", name)
+
+	immediateFlush := true
+	if definition.ImmediateFlush != nil {
+		immediateFlush = *definition.ImmediateFlush
+	}
+
+	policy := this.buildTriggeringPolicy(name, definition.Policies, filePattern, substitutor)
+	strategy := this.buildRolloverStrategy(name, definition.DefaultRolloverStrategy)
+
+	return NewRollingFileAppender(file, filePattern, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger, policy, strategy)
+}
+
+func (this *ConfigurationBuilder) buildTriggeringPolicy(name string, definition model.PoliciesDefinition, filePattern string, substitutor *substitution.Substitutor) rolling.TriggeringPolicy {
+	policies := make([]rolling.TriggeringPolicy, 0, 2)
+
+	if definition.TimeBasedTriggeringPolicy != nil {
+		interval := 1
+		if definition.TimeBasedTriggeringPolicy.Interval != nil {
+			interval = *definition.TimeBasedTriggeringPolicy.Interval
+		}
+		lang.Assert(interval > 0, "timeBasedTriggeringPolicy.interval must be positive for appender %q", name)
+
+		modulate := false
+		if definition.TimeBasedTriggeringPolicy.Modulate != nil {
+			modulate = *definition.TimeBasedTriggeringPolicy.Modulate
+		}
+
+		unit := rolling.TimeUnitFromFilePattern(filePattern)
+		policies = append(policies, rolling.NewTimeBasedTriggeringPolicy(unit, interval, modulate))
+	}
+
+	if definition.SizeBasedTriggeringPolicy != nil {
+		size := substitutor.Substitute(definition.SizeBasedTriggeringPolicy.Size)
+		policies = append(policies, rolling.NewSizeBasedTriggeringPolicy(format.ParseFileSize(size)))
+	}
+
+	lang.Assert(len(policies) > 0, "triggering policy is required for appender %q", name)
+
+	if len(policies) == 1 {
+		return policies[0]
+	}
+
+	return rolling.NewCompositeTriggeringPolicy(policies...)
+}
+
+func (this *ConfigurationBuilder) buildRolloverStrategy(name string, definition model.DefaultRolloverStrategyDefinition) rolling.RolloverStrategy {
+	max := 7
+	if definition.Max != nil {
+		max = *definition.Max
+	}
+
+	lang.Assert(max > 0, "defaultRolloverStrategy.max must be positive for appender %q", name)
+	return rolling.NewDefaultRolloverStrategy(max)
 }
 
 func (this *ConfigurationBuilder) buildLayout(definition model.LayoutDefinition, parser *PatternParser, substitutor *substitution.Substitutor) Layout {

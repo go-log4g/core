@@ -1,0 +1,31 @@
+package rolling
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/go-jang/go/lang"
+	"github.com/go-log4g/core/impl/format"
+)
+
+func FormatFilePattern(pattern string, index int, at time.Time) string {
+	result := strings.ReplaceAll(pattern, "%i", fmt.Sprint(index))
+
+	for {
+		start := strings.Index(result, "%d{")
+		if start < 0 {
+			return result
+		}
+
+		patternStart := start + 3
+		end := strings.IndexByte(result[patternStart:], '}')
+		lang.Assert(end >= 0, "unterminated date pattern in filePattern %q", pattern)
+
+		end += patternStart
+		datePattern := result[patternStart:end]
+		goPattern, _ := format.ConvertJavaPattern(datePattern)
+		value := at.Format(goPattern)
+		result = result[:start] + value + result[end+1:]
+	}
+}
