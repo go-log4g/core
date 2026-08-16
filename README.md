@@ -60,7 +60,7 @@ Create `config/log4g.yaml`:
 
 ``` yaml
 properties:
-  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c.%M:%L - %m%n"
+  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c:%L - %m%n"
 
 appenders:
   stdout:
