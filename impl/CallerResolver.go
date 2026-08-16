@@ -2,6 +2,7 @@ package impl
 
 import (
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -41,6 +42,8 @@ func (this *CallerResolver) resolveFunction(function string) (string, string) {
 }
 
 func (this *CallerResolver) resolveSymbol(packageName, symbol string) (string, string) {
+	symbol = this.resolveClosure(symbol)
+
 	lastDot := strings.LastIndexByte(symbol, '.')
 	if lastDot < 0 {
 		return packageName, symbol
@@ -69,4 +72,27 @@ func (this *CallerResolver) resolveSymbol(packageName, symbol string) (string, s
 	}
 
 	return packageName, method
+}
+
+func (this *CallerResolver) resolveClosure(symbol string) string {
+	for {
+		lastDot := strings.LastIndexByte(symbol, '.')
+		if lastDot < 0 {
+			return symbol
+		}
+
+		part := symbol[lastDot+1:]
+		if _, e := strconv.Atoi(part); e == nil {
+			symbol = symbol[:lastDot]
+			continue
+		}
+
+		if strings.HasPrefix(part, "func") {
+			if _, e := strconv.Atoi(part[4:]); e == nil {
+				return symbol[:lastDot]
+			}
+		}
+
+		return symbol
+	}
 }
