@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/go-jang/go/lang"
 	"github.com/go-log4g/core/impl/filter"
@@ -211,8 +212,23 @@ func (this *ConfigurationBuilder) buildRolloverStrategy(name string, definition 
 
 	var deleteAction *rolling.DeleteAction
 	if definition.Delete != nil {
-		maxAge := substitutor.Substitute(definition.Delete.MaxAge)
-		deleteAction = rolling.NewDeleteAction(filePattern, format.ParseDuration(maxAge))
+		maxAge := time.Duration(0)
+		if strings.TrimSpace(definition.Delete.MaxAge) != "" {
+			maxAge = format.ParseDuration(substitutor.Substitute(definition.Delete.MaxAge))
+		}
+
+		maxFiles := 0
+		if definition.Delete.MaxFiles != nil {
+			maxFiles = *definition.Delete.MaxFiles
+		}
+		lang.Assert(maxFiles >= 0, "defaultRolloverStrategy.delete.maxFiles must not be negative for appender %q", name)
+
+		maxTotalSize := int64(0)
+		if strings.TrimSpace(definition.Delete.MaxTotalSize) != "" {
+			maxTotalSize = format.ParseFileSize(substitutor.Substitute(definition.Delete.MaxTotalSize), 0)
+		}
+
+		deleteAction = rolling.NewDeleteAction(filePattern, maxAge, maxFiles, maxTotalSize)
 	}
 
 	return rolling.NewDefaultRolloverStrategy(max, deleteAction)

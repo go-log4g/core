@@ -113,6 +113,8 @@ appenders:
       # max: 7
       delete:
         maxAge: 30d
+        # maxFiles: 100
+        # maxTotalSize: 5GB
     layout:
       type: pattern
       pattern: "${pattern}"
@@ -231,6 +233,8 @@ rollingFile:
     # max: 7
     delete:
       maxAge: 30d
+      # maxFiles: 100
+      # maxTotalSize: 5GB
   layout:
     type: pattern
     pattern: "${pattern}"
@@ -299,8 +303,20 @@ application-20260817-7.log    newest
 successful rollover. Only files matching this appender's filePattern are considered for
 deletion. Other files in the same directory are not affected.
 
-`maxAge` accepts Go duration syntax such as `12h` and `24h`, with `d`
-also supported for days, for example `7d` or `30d`.
+All retention limits are optional:
+
+`maxAge` removes files older than the configured duration. Go duration
+syntax such as `12h` and `24h` is supported, with `d` also supported
+for days, for example `7d` or `30d`.  
+`maxFiles` limits the total number of retained rolled files.  
+`maxTotalSize` limits their combined size and accepts the same file
+size syntax as triggering policies, for example `500MB` or `5GB`.
+
+When multiple limits are configured, age retention is applied first,
+followed by file count and total size. When a count or size limit is
+exceeded, the oldest files are removed first.  
+Retention is evaluated after each successful rollover; it does not run
+as a background cleanup task.
 
 ### Loggers 
 
