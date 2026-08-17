@@ -2,8 +2,10 @@ package impl
 
 import (
 	"os"
+	"sync/atomic"
 	"time"
 
+	"github.com/go-errr/go/err"
 	"github.com/go-jang/go/lang"
 	"github.com/go-jang/go/util/optional"
 	"github.com/go-log4g/core/impl/filter"
@@ -19,6 +21,7 @@ type RollingFileAppender struct {
 	policy      rolling.TriggeringPolicy
 	strategy    rolling.RolloverStrategy
 	size        int64
+	failed      atomic.Bool
 }
 
 func NewRollingFileAppender(file string, filePattern string, append bool, bufferSize int, immediateFlush bool, layout Layout, filter filter.Filter, statusLogger *StatusLogger,
@@ -52,7 +55,6 @@ func (this *RollingFileAppender) beforeAppend(data []byte) {
 	if this.size > 0 && this.policy != nil && this.policy.IsTriggered(context) {
 		this.flushBuffered()
 		this.rollover(this.fileTime)
-		this.fileTime = now
 	}
 
 	this.size += int64(len(data))
@@ -60,6 +62,9 @@ func (this *RollingFileAppender) beforeAppend(data []byte) {
 
 // Implements fileAppenderDelegate
 func (this *RollingFileAppender) write(data []byte) {
+	if this.failed.Load() {
+		return
+	}
 	written := optional.OfCommaErr(this.handle.Write(data)).OrElsePanic("failed to write data to log file %q", this.file)
 	lang.Assert(written == len(data), "failed to write complete data to log file %q", this.file)
 }
@@ -82,10 +87,16 @@ func startupRollover(file string, filePattern string, startupPolicy *rolling.OnS
 }
 
 func (this *RollingFileAppender) rollover(at time.Time) {
+	defer err.Recover(func(e any) {
+		this.failed.Store(true)
+		panic(e)
+	})
+
 	lang.Assert(this.handle.Close() == nil, "failed to close log file %q", this.file)
 
 	this.strategy.Rollover(this.file, this.filePattern, at)
 
 	this.handle = openLogFile(this.file, false)
 	this.size = 0
+	this.fileTime = time.Now()
 }
