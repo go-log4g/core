@@ -28,7 +28,7 @@ func TestRollingFileAppender(test *testing.T) {
 	layout := impl.NewPatternLayout("%m%n", impl.NewPatternParser(statusLogger))
 	policy := rolling.NewSizeBasedTriggeringPolicy(12)
 	strategy := rolling.NewDefaultRolloverStrategy(3)
-	appender := impl.NewRollingFileAppender(file, filePattern, false, 1024, true, layout, nil, statusLogger, policy, strategy)
+	appender := impl.NewRollingFileAppender(file, filePattern, false, 1024, true, layout, nil, statusLogger, nil, policy, strategy)
 
 	callerContext := &impl.CallerContext{}
 

@@ -97,19 +97,20 @@ appenders:
   rollingFile:
     type: rollingFile
     file: logs/rollingFile.log
-    filePattern: logs/rollingFile-%d{yyyyMMdd}-%i.log
+    filePattern: logs/arch/rollingFile-%d{yyyyMMdd}-%i.log.zip
     # append: true
     # immediateFlush: true
     # bufferSize: 8192
-
     policies:
+      onStartupTriggeringPolicy:
+        minSize: 1B    
       timeBasedTriggeringPolicy:
         interval: 1
         # modulate: false
       sizeBasedTriggeringPolicy:
-        size: 10MB
+        size: 300MB
     # defaultRolloverStrategy:
-    #   max: 7
+      # max: 7
     layout:
       type: pattern
       pattern: "${pattern}"
@@ -212,20 +213,20 @@ concurrent log operations acquire the appender for writing.
 rollingFile:
   type: rollingFile
   file: logs/application.log
-  filePattern: logs/application-%d{yyyyMMdd}-%i.log
+  filePattern: logs/arch/application-%d{yyyyMMdd}-%i.log.zip
   # append: true
   # immediateFlush: true
   # bufferSize: 8192
-
   policies:
+    onStartupTriggeringPolicy:
+      minSize: 1B    
     timeBasedTriggeringPolicy:
-      # interval: 1
+      interval: 1
       # modulate: false
     sizeBasedTriggeringPolicy:
-      # size: 10MB
+      size: 300MB
   # defaultRolloverStrategy:
-  #   max: 7
-
+    # max: 7
   layout:
     type: pattern
     pattern: "${pattern}"
@@ -239,7 +240,7 @@ Rolled files can optionally be compressed by adding a supported
 compression extension to `filePattern`:
 
 ```yaml
-filePattern: logs/application-%d{yyyyMMdd}-%i.log.gz
+filePattern: logs/arch/application-%d{yyyyMMdd}-%i.log.zip
 ```
 
 Supported rollover formats are:
@@ -249,10 +250,18 @@ Supported rollover formats are:
 .log.zip   ZIP compressed
 ```
 
-`sizeBasedTriggeringPolicy` rolls the active file when it reaches the
-configured size. The default size is `10MB`. Supported units are `K`,
-`KB`, `M`, `MB`, `G`, `GB`, `T`, and `TB`; fractional values such as
-`1.5MB` are supported.
+`onStartupTriggeringPolicy` rolls an existing active log file when the
+appender is initialized and the file size is at least minSize. The
+default minSize is `1B`.  
+The startup rollover happens immediately during appender initialization,
+before the active log file is opened. It does not wait for the first log
+event.
+
+File sizes can be specified in bytes or using `B`, `K`, `KB`, `M`, `MB`,
+`G`, `GB`, `T`, and `TB` suffixes.
+
+`timeBasedTriggeringPolicy` rolls the active file according to the
+smallest time unit present in `filePattern`.
 
 `interval` defaults to `1`. An interval of `5` with a minute-based file
 pattern rolls every five minutes.
@@ -260,6 +269,9 @@ pattern rolls every five minutes.
 `modulate` defaults to `false`. When enabled, rollover intervals are
 aligned to natural time boundaries. For example, a five-minute policy
 started at `10:07` rolls at `10:10`, `10:15`, `10:20`, and so on.
+
+`sizeBasedTriggeringPolicy` rolls the active file when it reaches the
+configured size. The default size is `10MB`.
 
 When multiple triggering policies are configured, rollover occurs when
 any policy triggers.

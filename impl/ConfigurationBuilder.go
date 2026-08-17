@@ -154,10 +154,20 @@ func (this *ConfigurationBuilder) buildRollingFileAppender(name string, definiti
 		immediateFlush = *definition.ImmediateFlush
 	}
 
-	policy := this.buildTriggeringPolicy(name, definition.Policies, filePattern, substitutor)
+	startupPolicy := this.buildStartupTriggeringPolicy(definition.Policies, substitutor)
+	triggerPolicy := this.buildTriggeringPolicy(name, definition.Policies, filePattern, substitutor)
 	strategy := this.buildRolloverStrategy(name, definition.DefaultRolloverStrategy)
 
-	return NewRollingFileAppender(file, filePattern, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger, policy, strategy)
+	return NewRollingFileAppender(file, filePattern, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger, startupPolicy, triggerPolicy, strategy)
+}
+
+func (this *ConfigurationBuilder) buildStartupTriggeringPolicy(definition model.PoliciesDefinition, substitutor *substitution.Substitutor) *rolling.OnStartupTriggeringPolicy {
+	if definition.OnStartupTriggeringPolicy == nil {
+		return nil
+	}
+
+	minSize := substitutor.Substitute(definition.OnStartupTriggeringPolicy.MinSize)
+	return rolling.NewOnStartupTriggeringPolicy(format.ParseFileSize(minSize, 1))
 }
 
 func (this *ConfigurationBuilder) buildTriggeringPolicy(name string, definition model.PoliciesDefinition, filePattern string, substitutor *substitution.Substitutor) rolling.TriggeringPolicy {
@@ -181,15 +191,14 @@ func (this *ConfigurationBuilder) buildTriggeringPolicy(name string, definition 
 
 	if definition.SizeBasedTriggeringPolicy != nil {
 		size := substitutor.Substitute(definition.SizeBasedTriggeringPolicy.Size)
-		policies = append(policies, rolling.NewSizeBasedTriggeringPolicy(format.ParseFileSize(size)))
+		policies = append(policies, rolling.NewSizeBasedTriggeringPolicy(format.ParseFileSize(size, 10*1024*1024)))
 	}
 
-	lang.Assert(len(policies) > 0, "triggering policy is required for appender %q", name)
-
-	if len(policies) == 1 {
+	if len(policies) == 0 {
+		return nil
+	} else if len(policies) == 1 {
 		return policies[0]
 	}
-
 	return rolling.NewCompositeTriggeringPolicy(policies...)
 }
 

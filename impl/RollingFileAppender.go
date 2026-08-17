@@ -21,17 +21,19 @@ type RollingFileAppender struct {
 	size        int64
 }
 
-func NewRollingFileAppender(file, filePattern string, append bool, bufferSize int, immediateFlush bool, layout Layout, filter filter.Filter, statusLogger *StatusLogger, policy rolling.TriggeringPolicy, strategy rolling.RolloverStrategy) *RollingFileAppender {
+func NewRollingFileAppender(file string, filePattern string, append bool, bufferSize int, immediateFlush bool, layout Layout, filter filter.Filter, statusLogger *StatusLogger,
+	startupPolicy *rolling.OnStartupTriggeringPolicy, triggerPolicy rolling.TriggeringPolicy, strategy rolling.RolloverStrategy) *RollingFileAppender {
+
+	fileTime, size := startupRollover(file, filePattern, startupPolicy, strategy)
 	handle := openLogFile(file, append)
-	info := optional.OfCommaErr(handle.Stat()).OrElsePanic("failed to stat log file %q", file)
 
 	result := &RollingFileAppender{
 		filePattern: filePattern,
+		fileTime:    fileTime,
 		handle:      handle,
-		policy:      policy,
+		policy:      triggerPolicy,
 		strategy:    strategy,
-		size:        info.Size(),
-		fileTime:    lang.If(info.Size() > 0, info.ModTime(), time.Now()),
+		size:        size,
 	}
 	result.AbstractFileAppender = newAbstractFileAppender(file, bufferSize, immediateFlush, layout, filter, statusLogger, result)
 
@@ -47,7 +49,7 @@ func (this *RollingFileAppender) beforeAppend(data []byte) {
 		Time:      now,
 	}
 
-	if this.size > 0 && this.policy.IsTriggered(context) {
+	if this.size > 0 && this.policy != nil && this.policy.IsTriggered(context) {
 		this.flushBuffered()
 		this.rollover(this.fileTime)
 		this.fileTime = now
@@ -60,6 +62,23 @@ func (this *RollingFileAppender) beforeAppend(data []byte) {
 func (this *RollingFileAppender) write(data []byte) {
 	written := optional.OfCommaErr(this.handle.Write(data)).OrElsePanic("failed to write data to log file %q", this.file)
 	lang.Assert(written == len(data), "failed to write complete data to log file %q", this.file)
+}
+
+func startupRollover(file string, filePattern string, startupPolicy *rolling.OnStartupTriggeringPolicy, strategy rolling.RolloverStrategy) (time.Time, int64) {
+	fileTime := time.Now()
+
+	info, e := os.Stat(file)
+	if os.IsNotExist(e) {
+		return fileTime, 0
+	}
+	lang.Assert(e == nil, "failed to stat log file %q", file)
+
+	if startupPolicy != nil && startupPolicy.IsTriggered(info.Size()) {
+		strategy.Rollover(file, filePattern, info.ModTime())
+		return time.Now(), 0
+	}
+
+	return info.ModTime(), info.Size()
 }
 
 func (this *RollingFileAppender) rollover(at time.Time) {
