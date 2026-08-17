@@ -1,11 +1,13 @@
 package impl
 
+import "github.com/go-log4g/core/impl/abbr"
+
 type LoggerPatternConverter struct {
 	AbstractPatternConverter
-	abbreviator NameAbbreviator
+	abbreviator abbr.NameAbbreviator
 }
 
-func NewLoggerPatternConverter(formatting FormattingInfo, abbreviator NameAbbreviator) *LoggerPatternConverter {
+func NewLoggerPatternConverter(formatting FormattingInfo, abbreviator abbr.NameAbbreviator) *LoggerPatternConverter {
 	return &LoggerPatternConverter{
 		AbstractPatternConverter: NewAbstractPatternConverter(formatting),
 		abbreviator:              abbreviator,

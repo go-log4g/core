@@ -1,4 +1,4 @@
-package impl
+package abbr
 
 type PatternAbbreviatorFragment struct {
 	CharCount int

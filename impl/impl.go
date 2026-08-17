@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-log4g/core/impl/abbr"
 	"github.com/go-log4g/core/impl/substitution"
 )
 
@@ -33,9 +34,9 @@ func NewDefaultConfiguration() *Configuration {
 	return configuration
 }
 
-func NewNameAbbreviator(pattern string) (NameAbbreviator, error) {
+func NewNameAbbreviator(pattern string) (abbr.NameAbbreviator, error) {
 	if pattern == "" {
-		return NewNOPAbbreviator(), nil
+		return abbr.NewNOPAbbreviator(), nil
 	}
 
 	precision, e := strconv.Atoi(pattern)
@@ -49,26 +50,26 @@ func NewNameAbbreviator(pattern string) (NameAbbreviator, error) {
 
 	pattern = strings.TrimSuffix(pattern, ".")
 	parts := strings.Split(pattern, ".")
-	fragments := make([]*PatternAbbreviatorFragment, 0, len(parts))
+	fragments := make([]*abbr.PatternAbbreviatorFragment, 0, len(parts))
 
 	for _, part := range parts {
 		if part == "*" {
-			fragments = append(fragments, NewPatternAbbreviatorFragment(-1))
+			fragments = append(fragments, abbr.NewPatternAbbreviatorFragment(-1))
 			continue
 		}
 
 		length, e := strconv.Atoi(part)
 		if e != nil || length < 0 {
-			return nil, fmt.Errorf("unsupported abbreviation pattern %q", pattern)
+			return nil, fmt.Errorf("unsupported abbr pattern %q", pattern)
 		}
 
-		fragments = append(fragments, NewPatternAbbreviatorFragment(length))
+		fragments = append(fragments, abbr.NewPatternAbbreviatorFragment(length))
 	}
 
-	return NewPatternAbbreviator(fragments...), nil
+	return abbr.NewPatternAbbreviator(fragments...), nil
 }
 
-func newDynamicWordAbbreviator(pattern string) *DynamicWordAbbreviator {
+func newDynamicWordAbbreviator(pattern string) *abbr.DynamicWordAbbreviator {
 	parts := strings.Split(pattern, ".")
 	if len(parts) != 3 || parts[2] != "*" {
 		return nil
@@ -84,5 +85,5 @@ func newDynamicWordAbbreviator(pattern string) *DynamicWordAbbreviator {
 		return nil
 	}
 
-	return NewDynamicWordAbbreviator(charCount, retainCount)
+	return abbr.NewDynamicWordAbbreviator(charCount, retainCount)
 }

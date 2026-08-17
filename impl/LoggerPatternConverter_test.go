@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-log4g/core/impl"
+	"github.com/go-log4g/core/impl/abbr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +23,7 @@ func TestLoggerPatternConverterPrecision(test *testing.T) {
 
 	formatting := impl.NewDefaultFormattingInfo()
 
-	converter := impl.NewLoggerPatternConverter(formatting, impl.NewNOPAbbreviator())
+	converter := impl.NewLoggerPatternConverter(formatting, abbr.NewNOPAbbreviator())
 	require.Equal(test, "playground/internal/app/Service1", string(converter.Append(nil, event)))
 
 	converter = impl.NewLoggerPatternConverter(formatting, impl.NewMaxElementAbbreviator(0))
@@ -43,13 +44,13 @@ func TestLoggerPatternConverterPrecision(test *testing.T) {
 	converter = impl.NewLoggerPatternConverter(formatting, impl.NewMaxElementAbbreviator(-2))
 	require.Equal(test, "app/Service1", string(converter.Append(nil, event)))
 
-	converter = impl.NewLoggerPatternConverter(formatting, impl.NewPatternAbbreviator(
-		impl.NewPatternAbbreviatorFragment(1),
+	converter = impl.NewLoggerPatternConverter(formatting, abbr.NewPatternAbbreviator(
+		abbr.NewPatternAbbreviatorFragment(1),
 	))
 	require.Equal(test, "p/i/a/Service1", string(converter.Append(nil, event)))
 
-	converter = impl.NewLoggerPatternConverter(formatting, impl.NewPatternAbbreviator(
-		impl.NewPatternAbbreviatorFragment(2),
+	converter = impl.NewLoggerPatternConverter(formatting, abbr.NewPatternAbbreviator(
+		abbr.NewPatternAbbreviatorFragment(2),
 	))
 	require.Equal(test, "pl/in/ap/Service1", string(converter.Append(nil, event)))
 }

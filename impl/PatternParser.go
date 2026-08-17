@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-log4g/core/impl/abbr"
 )
 
 type PatternParser struct {
@@ -127,7 +129,7 @@ func (this *PatternParser) parseFormatting(pattern string, index int) (Formattin
 
 func (this *PatternParser) parseLogger(pattern string, start, index int, formatting FormattingInfo) (PatternConverter, int) {
 	if index >= len(pattern) || pattern[index] != '{' {
-		return NewLoggerPatternConverter(formatting, NewNOPAbbreviator()), index
+		return NewLoggerPatternConverter(formatting, abbr.NewNOPAbbreviator()), index
 	}
 
 	option, nextIndex, ok := this.parseOption(pattern, index)
@@ -141,7 +143,7 @@ func (this *PatternParser) parseLogger(pattern string, start, index int, formatt
 
 	if e != nil {
 		this.statusLogger.Error("Invalid pattern %q: %s at position %d", pattern, e, start)
-		return NewLoggerPatternConverter(formatting, NewNOPAbbreviator()), nextIndex
+		return NewLoggerPatternConverter(formatting, abbr.NewNOPAbbreviator()), nextIndex
 	}
 
 	return NewLoggerPatternConverter(formatting, abbreviator), nextIndex

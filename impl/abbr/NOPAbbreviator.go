@@ -1,4 +1,4 @@
-package impl
+package abbr
 
 type NOPAbbreviator struct {
 }
