@@ -21,7 +21,7 @@ func TestDefaultRolloverStrategy(test *testing.T) {
 	require.NoError(test, os.WriteFile(filepath.Join(dir, "application-2.log"), []byte("two"), 0644))
 	require.NoError(test, os.WriteFile(filepath.Join(dir, "application-3.log"), []byte("three"), 0644))
 
-	strategy := rolling.NewDefaultRolloverStrategy(3)
+	strategy := rolling.NewDefaultRolloverStrategy(3, nil)
 	strategy.Rollover(file, pattern, time.Now())
 
 	require.Equal(test, "two", string(optional.OfCommaErr(os.ReadFile(filepath.Join(dir, "application-1.log"))).OrElsePanic("cannot read file")))
@@ -41,7 +41,7 @@ func TestDefaultRolloverStrategyNotFull(test *testing.T) {
 	require.NoError(test, os.WriteFile(filepath.Join(dir, "application-1.log"), []byte("one"), 0644))
 	require.NoError(test, os.WriteFile(filepath.Join(dir, "application-2.log"), []byte("two"), 0644))
 
-	strategy := rolling.NewDefaultRolloverStrategy(3)
+	strategy := rolling.NewDefaultRolloverStrategy(3, nil)
 	strategy.Rollover(file, pattern, time.Now())
 
 	require.Equal(test, "one", string(optional.OfCommaErr(os.ReadFile(filepath.Join(dir, "application-1.log"))).OrElsePanic("cannot read file")))

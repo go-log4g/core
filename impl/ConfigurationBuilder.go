@@ -156,7 +156,7 @@ func (this *ConfigurationBuilder) buildRollingFileAppender(name string, definiti
 
 	startupPolicy := this.buildStartupTriggeringPolicy(definition.Policies, substitutor)
 	triggerPolicy := this.buildTriggeringPolicy(name, definition.Policies, filePattern, substitutor)
-	strategy := this.buildRolloverStrategy(name, definition.DefaultRolloverStrategy)
+	strategy := this.buildRolloverStrategy(name, definition.DefaultRolloverStrategy, filePattern, substitutor)
 
 	return NewRollingFileAppender(file, filePattern, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger, startupPolicy, triggerPolicy, strategy)
 }
@@ -202,14 +202,20 @@ func (this *ConfigurationBuilder) buildTriggeringPolicy(name string, definition 
 	return rolling.NewCompositeTriggeringPolicy(policies...)
 }
 
-func (this *ConfigurationBuilder) buildRolloverStrategy(name string, definition model.DefaultRolloverStrategyDefinition) rolling.RolloverStrategy {
+func (this *ConfigurationBuilder) buildRolloverStrategy(name string, definition model.DefaultRolloverStrategyDefinition, filePattern string, substitutor *substitution.Substitutor) rolling.RolloverStrategy {
 	max := 7
 	if definition.Max != nil {
 		max = *definition.Max
 	}
-
 	lang.Assert(max > 0, "defaultRolloverStrategy.max must be positive for appender %q", name)
-	return rolling.NewDefaultRolloverStrategy(max)
+
+	var deleteAction *rolling.DeleteAction
+	if definition.Delete != nil {
+		maxAge := substitutor.Substitute(definition.Delete.MaxAge)
+		deleteAction = rolling.NewDeleteAction(filePattern, format.ParseDuration(maxAge))
+	}
+
+	return rolling.NewDefaultRolloverStrategy(max, deleteAction)
 }
 
 func (this *ConfigurationBuilder) buildLayout(definition model.LayoutDefinition, parser *PatternParser, substitutor *substitution.Substitutor) Layout {

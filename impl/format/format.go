@@ -4,6 +4,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-jang/go/lang"
 )
@@ -80,4 +81,21 @@ func ConvertJavaPattern(pattern string) (string, Unit) {
 	}
 
 	return result, smallestUnit
+}
+
+func ParseDuration(value string) time.Duration {
+	original := value
+	value = strings.TrimSpace(value)
+
+	lang.Assert(value != "", "duration is required")
+
+	if strings.HasSuffix(value, "d") {
+		days, e := strconv.ParseFloat(strings.TrimSpace(strings.TrimSuffix(value, "d")), 64)
+		lang.Assert(e == nil && days > 0, "invalid duration %q", original)
+		return time.Duration(days * float64(24*time.Hour))
+	}
+
+	duration, e := time.ParseDuration(value)
+	lang.Assert(e == nil && duration > 0, "invalid duration %q", original)
+	return duration
 }

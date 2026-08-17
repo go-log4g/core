@@ -2,6 +2,7 @@ package rolling
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,4 +29,25 @@ func FormatFilePattern(pattern string, index int, at time.Time) string {
 		value := at.Format(goPattern)
 		result = result[:start] + value + result[end+1:]
 	}
+}
+
+func FilePatternMatcher(filePattern string) (string, string) {
+	dir := filepath.Dir(filePattern)
+	name := filepath.Base(filePattern)
+
+	for {
+		start := strings.Index(name, "%d{")
+		if start < 0 {
+			break
+		}
+
+		end := strings.IndexByte(name[start+3:], '}')
+		lang.Assert(end >= 0, "unterminated date pattern in filePattern %q", filePattern)
+
+		end += start + 3
+		name = name[:start] + "*" + name[end+1:]
+	}
+
+	name = strings.ReplaceAll(name, "%i", "*")
+	return dir, name
 }

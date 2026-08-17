@@ -109,8 +109,10 @@ appenders:
         # modulate: false
       sizeBasedTriggeringPolicy:
         size: 300MB
-    # defaultRolloverStrategy:
+    defaultRolloverStrategy:
       # max: 7
+      delete:
+        maxAge: 30d
     layout:
       type: pattern
       pattern: "${pattern}"
@@ -225,8 +227,10 @@ rollingFile:
       # modulate: false
     sizeBasedTriggeringPolicy:
       size: 300MB
-  # defaultRolloverStrategy:
+  defaultRolloverStrategy:
     # max: 7
+    delete:
+      maxAge: 30d
   layout:
     type: pattern
     pattern: "${pattern}"
@@ -290,6 +294,13 @@ application-20260817-2.log
 ...
 application-20260817-7.log    newest
 ```
+
+`defaultRolloverStrategy.delete` can remove expired rolled files after a
+successful rollover. Only files matching this appender's filePattern are considered for
+deletion. Other files in the same directory are not affected.
+
+`maxAge` accepts Go duration syntax such as `12h` and `24h`, with `d`
+also supported for days, for example `7d` or `30d`.
 
 ### Loggers 
 

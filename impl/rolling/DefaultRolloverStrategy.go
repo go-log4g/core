@@ -14,13 +14,16 @@ import (
 )
 
 type DefaultRolloverStrategy struct {
-	max int
+	max          int
+	deleteAction *DeleteAction
 }
 
-func NewDefaultRolloverStrategy(max int) *DefaultRolloverStrategy {
+func NewDefaultRolloverStrategy(max int, deleteAction *DeleteAction) *DefaultRolloverStrategy {
 	lang.Assert(max > 0, "max must be positive")
+
 	return &DefaultRolloverStrategy{
-		max: max,
+		max:          max,
+		deleteAction: deleteAction,
 	}
 }
 
@@ -33,6 +36,7 @@ func (this *DefaultRolloverStrategy) Rollover(file, filePattern string, at time.
 
 		if _, e := os.Stat(target); os.IsNotExist(e) {
 			this.archive(file, target)
+			this.cleanup()
 			return
 		}
 	}
@@ -48,6 +52,7 @@ func (this *DefaultRolloverStrategy) Rollover(file, filePattern string, at time.
 
 	newest := FormatFilePattern(filePattern, this.max, at)
 	this.archive(file, newest)
+	this.cleanup()
 }
 
 func (this *DefaultRolloverStrategy) archive(source, target string) {
@@ -103,4 +108,10 @@ func (this *DefaultRolloverStrategy) zip(source, target string) {
 	lang.Assert(output.Close() == nil, "failed to close compressed rollover file %q", target)
 
 	lang.Assert(os.Remove(source) == nil, "failed to remove rollover source file %q", source)
+}
+
+func (this *DefaultRolloverStrategy) cleanup() {
+	if this.deleteAction != nil {
+		this.deleteAction.Execute()
+	}
 }
