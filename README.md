@@ -235,6 +235,20 @@ rollingFile:
 rolled files. `%d{...}` inserts the rollover period and `%i` inserts the
 rollover index.
 
+Rolled files can optionally be compressed by adding a supported
+compression extension to `filePattern`:
+
+```yaml
+filePattern: logs/application-%d{yyyyMMdd}-%i.log.gz
+```
+
+Supported rollover formats are:
+```
+.log       Uncompressed
+.log.gz    GZIP compressed
+.log.zip   ZIP compressed
+```
+
 `sizeBasedTriggeringPolicy` rolls the active file when it reaches the
 configured size. The default size is `10MB`. Supported units are `K`,
 `KB`, `M`, `MB`, `G`, `GB`, `T`, and `TB`; fractional values such as
