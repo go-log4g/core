@@ -150,7 +150,7 @@ Configuration properties can be defined once and reused:
 
 ```yaml
 properties:
-  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c.%M:%L - %m%n"
+  pattern: "%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c:%L - %m%n"
 ```
 
 Properties, environment variables, and application parameters use
@@ -285,13 +285,13 @@ playground/internal/app/service/UserService
 The configured pattern:
 
 ``` text
-%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c.%M:%L - %m%n
+%d{yyyy-MM-dd HH:mm:ss.SSS}{UTC} %-5p %c:%L - %m%n
 ```
 
 produces output such as:
 
 ``` text
-2026-08-13 12:34:56.789 INFO  playground/internal/app/Service1.AfterPropertiesSet:23 - Service initialized
+2026-08-13 12:34:56.789 INFO  playground/internal/app/Service1:23 - Service initialized
 ```
 
 ### Date/time formats
