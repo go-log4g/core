@@ -9,11 +9,13 @@ import (
 
 type ConfigurationLoader struct {
 	statusLogger *StatusLogger
+	defaultPaths []string
 }
 
-func NewConfigurationLoader(statusLogger *StatusLogger) *ConfigurationLoader {
+func NewConfigurationLoader(statusLogger *StatusLogger, defaultPaths ...string) *ConfigurationLoader {
 	return &ConfigurationLoader{
 		statusLogger: statusLogger,
+		defaultPaths: defaultPaths,
 	}
 }
 
@@ -24,7 +26,6 @@ func (this *ConfigurationLoader) Load() *model.ConfigurationDefinition {
 		if os.IsNotExist(e) {
 			continue
 		}
-
 		if e != nil {
 			this.statusLogger.Error("Cannot read configuration %s: %v", path, e)
 			this.statusLogger.Warn("Using default configuration")
@@ -48,16 +49,11 @@ func (this *ConfigurationLoader) Load() *model.ConfigurationDefinition {
 }
 
 func (this *ConfigurationLoader) paths() []string {
-	result := make([]string, 0, 3)
+	result := make([]string, 0, len(this.defaultPaths)+1)
 
 	if path := substitutor.ConfigurationFile(); path != "" {
 		result = append(result, path)
 	}
 
-	result = append(result,
-		"config/log4g.yaml",
-		"log4g.yaml",
-	)
-
-	return result
+	return append(result, this.defaultPaths...)
 }

@@ -10,21 +10,11 @@ parameterized messages.
 `go-log4g` configures the standard `log/slog` logger automatically when
 the `core` package is initialized.
 
-Import `core` as a blank import and place it in a separate import group
-at the top:
+Import `core` as a blank import in the application bootstrap:
 
 ```go
-import (
-    _ "github.com/go-log4g/core"
-
-    "log/slog"
-
-    "myapp/internal/service"
-)
+import _ "github.com/go-log4g/core"
 ```
-The separate import group makes the initialization dependency explicit:
-Log4g should be initialized before application packages and other
-libraries that may log during their initialization.
 
 During initialization, Log4g searches for a configuration file in this
 order:
@@ -42,16 +32,48 @@ processed, Log4g reports the error to stderr and falls back to the
 default configuration.  
 
 Once initialized, use standard slog normally:
-```
+```go
 slog.Info("Application started")
 slog.Debug("Loading user", "userId", 123)
 ```
 Or use the optional log4g facade for {} parameterized messages:
-```
+```go
 import "github.com/go-log4g/core/log4g"
 
 log4g.Info("User {} authenticated", 123)
 log4g.Debug("Loaded {} records in {}", count, elapsed)
+```
+
+## Testing
+
+Go runs tests with the package directory as the working directory rather
+than the module root. This makes normal relative configuration lookup
+inconvenient for tests in nested packages.
+
+Import the Log4g test bootstrap to enable test configuration:
+
+```go
+import _ "github.com/go-log4g/core/test"
+```
+
+The test bootstrap locates the module root by searching parent directories
+for go.mod and loads configuration in the following order:
+
+- The file specified by the `--log4g.configurationFile` command-line property
+- The file specified by the `LOG4G_CONFIGURATION_FILE` environment variable
+- <module>/config/log4g-test.yaml
+- <module>/log4g-test.yaml
+- <module>/config/log4g.yaml
+- <module>/log4g.yaml
+
+The first existing configuration file is loaded.
+
+This allows a project to keep a dedicated test configuration:
+
+```
+config/
+  log4g.yaml
+  log4g-test.yaml
 ```
 
 ## Configuration
@@ -139,7 +161,7 @@ This configuration writes `DEBUG` through `WARN` events to `stdout` and
 `ERROR` events to `stderr`. The root level is `ERROR`, while configured
 logger hierarchies can override or inherit their effective level.
 
-### Logger levels
+## Logger levels
 
 Logger levels are inherited hierarchically. A logger without an explicit
 level inherits the level of its nearest configured parent, falling back
@@ -149,7 +171,7 @@ If the root logger has no explicit level, `--log4g.level` is used when
 provided, followed by the `LOG4G_LEVEL` environment variable. If none is
 configured, the root level defaults to `ERROR`.
 
-### Properties
+## Properties
 
 Configuration properties can be defined once and reused:
 
@@ -177,7 +199,7 @@ Substitution is recursive, so a configuration property may itself
 reference another property, environment variable, or application
 parameter.
 
-### File appenders
+## File appenders
 
 `file` writes log events to a file:
 
@@ -209,7 +231,7 @@ queue or dropping log events.
 File writes are synchronized fairly, preserving the order in which
 concurrent log operations acquire the appender for writing.
 
-### Rolling file appenders
+## Rolling file appenders
 
 `rollingFile` extends file output with size- and time-based rollover:
 
@@ -318,7 +340,7 @@ exceeded, the oldest files are removed first.
 Retention is evaluated after each successful rollover; it does not run
 as a background cleanup task.
 
-### Loggers 
+## Loggers 
 
 Loggers configuration is hierarchical. For example:
 
@@ -333,7 +355,7 @@ playground/internal/app/Service1
 playground/internal/app/service/UserService
 ```
 
-### Pattern layout
+## Pattern layout
 
 The configured pattern:
 
@@ -347,7 +369,7 @@ produces output such as:
 2026-08-13 12:34:56.789 INFO  playground/internal/app/Service1:23 - Service initialized
 ```
 
-### Date/time formats
+## Date/time formats
 
 `%d` accepts either a Java-style date/time pattern or one of the
 predefined formats.
@@ -399,7 +421,7 @@ A timezone can be supplied as the second date option:
 → 2026-08-17 12:34:56.789
 ```
 
-### Supported patterns
+## Supported patterns
 
 ``` text
 %d{pattern}          Date/time
@@ -459,7 +481,7 @@ Examples:
 → {requestId=8f24..., userId=123}
 ```
 
-### Width and alignment
+## Width and alignment
 
 A minimum width can be specified before a converter:
 
@@ -502,7 +524,7 @@ Without a request ID:
 [            ]
 ```
 
-### Logger name precision
+## Logger name precision
 
 Given:
 
@@ -525,7 +547,7 @@ the following patterns produce:
 Positive precision keeps rightmost components. Negative precision
 removes components from the left.
 
-### Logger name abbreviation
+## Logger name abbreviation
 
 Given:
 
