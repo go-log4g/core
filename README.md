@@ -47,34 +47,32 @@ log4g.Debug("Loaded {} records in {}", count, elapsed)
 ## Testing
 
 Go runs tests with the package directory as the working directory rather
-than the module root. This makes normal relative configuration lookup
-inconvenient for tests in nested packages.
+than the module root. Log4g automatically detects the Go test runner and
+locates the module root by searching parent directories for `go.mod`.
 
-Import the Log4g test bootstrap to enable test configuration:
-
-```go
-import _ "github.com/go-log4g/core/test"
-```
-
-The test bootstrap locates the module root by searching parent directories
-for go.mod and loads configuration in the following order:
+When running tests, configuration is resolved in the following order:
 
 - The file specified by the `--log4g.configurationFile` command-line property
 - The file specified by the `LOG4G_CONFIGURATION_FILE` environment variable
-- <module>/config/log4g-test.yaml
-- <module>/log4g-test.yaml
-- <module>/config/log4g.yaml
-- <module>/log4g.yaml
+- `module/config/log4g-test.yaml`
+- `module/log4g-test.yaml`
+- `module/config/log4g.yaml`
+- `module/log4g.yaml`
 
 The first existing configuration file is loaded.
 
-This allows a project to keep a dedicated test configuration:
+This allows a project to keep a dedicated test configuration without any
+additional test setup:
 
-```
+```text
 config/
   log4g.yaml
   log4g-test.yaml
 ```
+
+`log4g-test.yaml` is used automatically when running tests, while
+`log4g.yaml` remains the fallback when no test-specific configuration is
+provided.
 
 ## Configuration
 

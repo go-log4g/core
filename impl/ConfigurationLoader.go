@@ -2,20 +2,23 @@ package impl
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/go-jang/go/lang"
+	"github.com/go-jang/go/util/optional"
+	"github.com/go-jang/go/util/stream"
 	"github.com/go-log4g/core/impl/model"
 	"gopkg.in/yaml.v3"
 )
 
 type ConfigurationLoader struct {
 	statusLogger *StatusLogger
-	defaultPaths []string
 }
 
-func NewConfigurationLoader(statusLogger *StatusLogger, defaultPaths ...string) *ConfigurationLoader {
+func NewConfigurationLoader(statusLogger *StatusLogger) *ConfigurationLoader {
 	return &ConfigurationLoader{
 		statusLogger: statusLogger,
-		defaultPaths: defaultPaths,
 	}
 }
 
@@ -49,11 +52,41 @@ func (this *ConfigurationLoader) Load() *model.ConfigurationDefinition {
 }
 
 func (this *ConfigurationLoader) paths() []string {
-	result := make([]string, 0, len(this.defaultPaths)+1)
-
+	result := make([]string, 0, 5)
 	if path := substitutor.ConfigurationFile(); path != "" {
 		result = append(result, path)
 	}
 
-	return append(result, this.defaultPaths...)
+	if isTest() {
+		root := moduleRoot()
+		return append(result,
+			filepath.Join(root, "config", "log4g-test.yaml"),
+			filepath.Join(root, "log4g-test.yaml"),
+			filepath.Join(root, "config", "log4g.yaml"),
+			filepath.Join(root, "log4g.yaml"),
+		)
+	}
+
+	return append(result,
+		"config/log4g.yaml",
+		"log4g.yaml",
+	)
+}
+
+func isTest() bool {
+	return stream.From(os.Args[1:]).
+		Filter(func(s string) bool { return strings.HasPrefix(s, "-test.timeout=") }).
+		FindFirst().Present()
+}
+
+func moduleRoot() string {
+	dir := optional.OfCommaErr(os.Getwd()).OrElsePanic("Cannot get working directory")
+	for {
+		if _, e := os.Stat(filepath.Join(dir, "go.mod")); e == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		lang.Assert(parent != dir, "Cannot find go.mod from %q", dir)
+		dir = parent
+	}
 }

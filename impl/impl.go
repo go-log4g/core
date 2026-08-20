@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-errr/go/err"
 	"github.com/go-log4g/core/impl/abbr"
 	"github.com/go-log4g/core/impl/substitution"
 )
@@ -15,28 +14,6 @@ import (
 const defaultPattern = "%m%n"
 
 var substitutor = substitution.NewSubstitutor()
-
-func Initialize(paths ...string) {
-	statusLogger := NewStatusLogger()
-	defer err.Recover(func(e any) {
-		statusLogger.Error("Failed to configure Log4g: %v; using default configuration", e)
-		install(NewDefaultConfiguration(), statusLogger)
-	})
-
-	loader := NewConfigurationLoader(statusLogger, paths...)
-	definition := loader.Load()
-
-	builder := NewConfigurationBuilder(statusLogger)
-	install(builder.Build(definition), statusLogger)
-}
-
-func install(configuration *Configuration, statusLogger *StatusLogger) {
-	callerResolver := NewCallerResolver()
-	callerContextResolver := NewCallerContextResolver(callerResolver, configuration)
-	callerContextCache := NewCallerContextCache(callerContextResolver)
-
-	slog.SetDefault(slog.New(NewHandler(configuration, callerContextCache, statusLogger)))
-}
 
 func NewDefaultConfiguration() *Configuration {
 	statusLogger := NewStatusLogger()
