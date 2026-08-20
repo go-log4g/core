@@ -43,7 +43,7 @@ func (this *ConfigurationLoader) Load() *model.ConfigurationDefinition {
 			return nil
 		}
 
-		this.statusLogger.Info("Loaded configuration %s", path)
+		this.statusLogger.Info("Loaded configuration from %s", path)
 		return result
 	}
 

@@ -24,7 +24,7 @@ func NewStatusLogger() *StatusLogger {
 }
 
 func (this *StatusLogger) Info(format string, args ...any) {
-	_, _ = fmt.Fprintf(os.Stderr, "LOG4G INFO  "+format+"\n", args...)
+	_, _ = fmt.Fprintf(os.Stdout, "LOG4G INFO  "+format+"\n", args...)
 }
 
 func (this *StatusLogger) Warn(format string, args ...any) {
