@@ -14,6 +14,7 @@ import (
 	"github.com/go-log4g/core/impl/model"
 	"github.com/go-log4g/core/impl/rolling"
 	"github.com/go-log4g/core/impl/substitution"
+	"gopkg.in/yaml.v3"
 )
 
 type ConfigurationBuilder struct {
@@ -57,10 +58,12 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 	this.resolveLoggerLevels(configuration, definition.Loggers, substitutor)
 
 	patternParser := NewPatternParser(this.statusLogger)
-	for name, appenderDefinition := range definition.Appenders {
-		appender := this.buildAppender(name, appenderDefinition, patternParser, substitutor)
+	for name, dynamicDefinition := range definition.Appenders {
+		appender := this.buildAppenderNode(name, dynamicDefinition.Node, patternParser, substitutor)
 		if appender != nil {
 			configuration.Appenders[name] = appender
+		} else {
+			configuration.PendingAppenders[name] = dynamicDefinition.Node
 		}
 	}
 
@@ -351,4 +354,25 @@ func (this *ConfigurationBuilder) buildAppenderRef(definition *model.AppenderRef
 		Level:  level,
 		Filter: this.buildFilter(definition.Filter, substitutor),
 	}
+}
+
+func (this *ConfigurationBuilder) buildAppenderNode(name string, node *yaml.Node, parser *PatternParser, substitutor *substitution.Substitutor) Appender {
+	var header appenderDefinitionHeader
+	lang.Assert(node.Decode(&header) == nil, "cannot parse appender %q", name)
+	lang.Assert(strings.TrimSpace(header.Type) != "", "appender type is missing for appender %q", name)
+
+	appenderType := strings.ToLower(substitutor.Substitute(header.Type))
+
+	switch appenderType {
+	case "console", "file", "rollingfile":
+		var definition model.AppenderDefinition
+		lang.Assert(node.Decode(&definition) == nil, "cannot parse appender %q", name)
+		return this.buildAppender(name, definition, parser, substitutor)
+	default:
+		return nil
+	}
+}
+
+type appenderDefinitionHeader struct {
+	Type string `yaml:"type"`
 }

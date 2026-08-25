@@ -7,6 +7,7 @@ import (
 	"github.com/go-log4g/core/impl"
 	"github.com/go-log4g/core/impl/model"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestConfigurationBuilderFilters(test *testing.T) {
@@ -21,8 +22,8 @@ func TestConfigurationBuilderFilters(test *testing.T) {
 				{Ref: "stderr"},
 			},
 		},
-		Appenders: map[string]model.AppenderDefinition{
-			"stdout": {
+		Appenders: map[string]*model.DynamicDefinition{
+			"stdout": appenderDefinition(test, model.AppenderDefinition{
 				Type:   "console",
 				Target: "stdout",
 				Filter: model.FilterDefinition{
@@ -30,15 +31,15 @@ func TestConfigurationBuilderFilters(test *testing.T) {
 					MinLevel: "debug",
 					MaxLevel: "warn",
 				},
-			},
-			"stderr": {
+			}),
+			"stderr": appenderDefinition(test, model.AppenderDefinition{
 				Type:   "console",
 				Target: "stderr",
 				Filter: model.FilterDefinition{
 					Type:  "threshold",
 					Level: "error",
 				},
-			},
+			}),
 		},
 	}
 
@@ -60,8 +61,8 @@ func TestConfigurationBuilderRejectsInvalidFilter(test *testing.T) {
 				{Ref: "console"},
 			},
 		},
-		Appenders: map[string]model.AppenderDefinition{
-			"console": {
+		Appenders: map[string]*model.DynamicDefinition{
+			"console": appenderDefinition(test, model.AppenderDefinition{
 				Type:   "console",
 				Target: "stdout",
 				Filter: model.FilterDefinition{
@@ -69,7 +70,7 @@ func TestConfigurationBuilderRejectsInvalidFilter(test *testing.T) {
 					MinLevel: "error",
 					MaxLevel: "debug",
 				},
-			},
+			}),
 		},
 	}
 
@@ -92,11 +93,11 @@ func TestConfigurationBuilderBuildsAppenderRefLevel(test *testing.T) {
 				},
 			},
 		},
-		Appenders: map[string]model.AppenderDefinition{
-			"console": {
+		Appenders: map[string]*model.DynamicDefinition{
+			"console": appenderDefinition(test, model.AppenderDefinition{
 				Type:   "console",
 				Target: "stdout",
-			},
+			}),
 		},
 	}
 
@@ -126,11 +127,11 @@ func TestConfigurationBuilderBuildsAppenderRefFilter(test *testing.T) {
 				},
 			},
 		},
-		Appenders: map[string]model.AppenderDefinition{
-			"console": {
+		Appenders: map[string]*model.DynamicDefinition{
+			"console": appenderDefinition(test, model.AppenderDefinition{
 				Type:   "console",
 				Target: "stdout",
-			},
+			}),
 		},
 	}
 
@@ -162,11 +163,11 @@ func TestConfigurationBuilderSubstitutesAppenderRef(test *testing.T) {
 				},
 			},
 		},
-		Appenders: map[string]model.AppenderDefinition{
-			"console": {
+		Appenders: map[string]*model.DynamicDefinition{
+			"console": appenderDefinition(test, model.AppenderDefinition{
 				Type:   "console",
 				Target: "stdout",
-			},
+			}),
 		},
 	}
 
@@ -176,4 +177,10 @@ func TestConfigurationBuilderSubstitutesAppenderRef(test *testing.T) {
 	require.Len(test, resolved.AppenderRefs, 1)
 	require.Equal(test, slog.LevelWarn, *resolved.AppenderRefs[0].Level)
 	require.Same(test, configuration.Appenders["console"], resolved.AppenderRefs[0].Appender)
+}
+
+func appenderDefinition(test *testing.T, definition model.AppenderDefinition) *model.DynamicDefinition {
+	node := &yaml.Node{}
+	require.NoError(test, node.Encode(definition))
+	return &model.DynamicDefinition{Node: node}
 }

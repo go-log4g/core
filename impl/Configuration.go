@@ -3,20 +3,24 @@ package impl
 import (
 	"log/slog"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Configuration struct {
-	Root         *LoggerConfig
-	Loggers      []*LoggerConfig
-	Appenders    map[string]Appender
-	MinimumLevel slog.Level
+	Root             *LoggerConfig
+	Loggers          []*LoggerConfig
+	Appenders        map[string]Appender
+	PendingAppenders map[string]*yaml.Node
+	MinimumLevel     slog.Level
 }
 
 func NewConfiguration() *Configuration {
 	return &Configuration{
-		Root:         NewLoggerConfig("", slog.LevelError),
-		Appenders:    make(map[string]Appender),
-		MinimumLevel: slog.LevelError,
+		Root:             NewLoggerConfig("", slog.LevelError),
+		Appenders:        make(map[string]Appender),
+		PendingAppenders: make(map[string]*yaml.Node),
+		MinimumLevel:     slog.LevelError,
 	}
 }
 
