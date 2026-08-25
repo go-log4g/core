@@ -59,11 +59,14 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 
 	patternParser := NewPatternParser(this.statusLogger)
 	for name, dynamicDefinition := range definition.Appenders {
-		appender := this.buildAppenderNode(name, dynamicDefinition.Node, patternParser, substitutor)
+		appender, appenderType := this.buildAppenderNode(name, dynamicDefinition.Node, patternParser, substitutor)
 		if appender != nil {
 			configuration.Appenders[name] = appender
 		} else {
-			configuration.PendingAppenders[name] = dynamicDefinition.Node
+			configuration.PendingAppenders[name] = &PendingAppender{
+				Type:       appenderType,
+				Definition: dynamicDefinition,
+			}
 		}
 	}
 
@@ -356,7 +359,7 @@ func (this *ConfigurationBuilder) buildAppenderRef(definition *model.AppenderRef
 	}
 }
 
-func (this *ConfigurationBuilder) buildAppenderNode(name string, node *yaml.Node, parser *PatternParser, substitutor *substitution.Substitutor) Appender {
+func (this *ConfigurationBuilder) buildAppenderNode(name string, node *yaml.Node, parser *PatternParser, substitutor *substitution.Substitutor) (Appender, string) {
 	var header appenderDefinitionHeader
 	lang.Assert(node.Decode(&header) == nil, "cannot parse appender %q", name)
 	lang.Assert(strings.TrimSpace(header.Type) != "", "appender type is missing for appender %q", name)
@@ -367,9 +370,9 @@ func (this *ConfigurationBuilder) buildAppenderNode(name string, node *yaml.Node
 	case "console", "file", "rollingfile":
 		var definition model.AppenderDefinition
 		lang.Assert(node.Decode(&definition) == nil, "cannot parse appender %q", name)
-		return this.buildAppender(name, definition, parser, substitutor)
+		return this.buildAppender(name, definition, parser, substitutor), appenderType
 	default:
-		return nil
+		return nil, appenderType
 	}
 }
 

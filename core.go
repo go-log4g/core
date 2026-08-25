@@ -7,6 +7,8 @@ import (
 	"github.com/go-log4g/core/impl"
 )
 
+var configuration *impl.Configuration
+
 func init() {
 	statusLogger := impl.NewStatusLogger()
 	defer err.Recover(func(e any) {
@@ -18,7 +20,8 @@ func init() {
 	definition := loader.Load()
 
 	builder := impl.NewConfigurationBuilder(statusLogger)
-	install(builder.Build(definition), statusLogger)
+	configuration = builder.Build(definition)
+	install(configuration, statusLogger)
 }
 
 func install(configuration *impl.Configuration, statusLogger *impl.StatusLogger) {
@@ -27,4 +30,8 @@ func install(configuration *impl.Configuration, statusLogger *impl.StatusLogger)
 	callerContextCache := impl.NewCallerContextCache(callerContextResolver)
 
 	slog.SetDefault(slog.New(impl.NewHandler(configuration, callerContextCache, statusLogger)))
+}
+
+func RegisterAppender(appenderType string, factory impl.AppenderFactory) {
+	configuration.ActivatePendingAppenders(appenderType, factory)
 }

@@ -4,14 +4,14 @@ import (
 	"log/slog"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/go-jang/go/lang"
 )
 
 type Configuration struct {
 	Root             *LoggerConfig
 	Loggers          []*LoggerConfig
 	Appenders        map[string]Appender
-	PendingAppenders map[string]*yaml.Node
+	PendingAppenders map[string]*PendingAppender
 	MinimumLevel     slog.Level
 }
 
@@ -19,7 +19,7 @@ func NewConfiguration() *Configuration {
 	return &Configuration{
 		Root:             NewLoggerConfig("", slog.LevelError),
 		Appenders:        make(map[string]Appender),
-		PendingAppenders: make(map[string]*yaml.Node),
+		PendingAppenders: make(map[string]*PendingAppender),
 		MinimumLevel:     slog.LevelError,
 	}
 }
@@ -94,4 +94,18 @@ func (this *Configuration) resolveAppenderRef(ref *AppenderRef) *AppenderRef {
 	result := *ref
 	result.Appender = appender
 	return &result
+}
+
+func (this *Configuration) ActivatePendingAppenders(appenderType string, factory AppenderFactory) {
+	for name, pending := range this.PendingAppenders {
+		if pending.Type != appenderType {
+			continue
+		}
+
+		appender := factory(name, pending.Definition)
+		lang.Assert(appender != nil, "appender factory returned nil for %q", name)
+
+		this.Appenders[name] = appender
+		delete(this.PendingAppenders, name)
+	}
 }
