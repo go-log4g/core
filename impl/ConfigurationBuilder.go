@@ -33,9 +33,13 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 
 	substitutor.SetProperties(definition.Properties)
 	configuration := NewConfiguration()
-	configuration.Root = NewLoggerConfig("", this.rootLevel(definition, substitutor), definition.Root.Appenders...)
+
+	configuration.Root = NewLoggerConfig("", this.rootLevel(definition, substitutor))
+	configuration.Root.AppenderRefs = this.buildAppenderRefs(definition.Root.AppenderRefs, substitutor)
+
 	for name, loggerDefinition := range definition.Loggers {
-		loggerConfig := NewLoggerConfig(name, configuration.Root.Level, loggerDefinition.Appenders...)
+		loggerConfig := NewLoggerConfig(name, configuration.Root.Level)
+		loggerConfig.AppenderRefs = this.buildAppenderRefs(loggerDefinition.AppenderRefs, substitutor)
 		if loggerDefinition.Additive != nil {
 			loggerConfig.Additive = *loggerDefinition.Additive
 		}
@@ -325,4 +329,26 @@ func (this *ConfigurationBuilder) minimumLevel(configuration *Configuration) slo
 	}
 
 	return result
+}
+
+func (this *ConfigurationBuilder) buildAppenderRefs(definitions []*model.AppenderRefDefinition, substitutor *substitution.Substitutor) []*AppenderRef {
+	result := make([]*AppenderRef, 0, len(definitions))
+	for _, definition := range definitions {
+		result = append(result, this.buildAppenderRef(definition, substitutor))
+	}
+	return result
+}
+
+func (this *ConfigurationBuilder) buildAppenderRef(definition *model.AppenderRefDefinition, substitutor *substitution.Substitutor) *AppenderRef {
+	var level *slog.Level
+	if strings.TrimSpace(definition.Level) != "" {
+		value := parseLevel(substitutor.Substitute(definition.Level))
+		level = &value
+	}
+
+	return &AppenderRef{
+		Ref:    substitutor.Substitute(definition.Ref),
+		Level:  level,
+		Filter: this.buildFilter(definition.Filter, substitutor),
+	}
 }

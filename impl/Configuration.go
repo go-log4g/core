@@ -22,7 +22,7 @@ func NewConfiguration() *Configuration {
 
 func (this *Configuration) Resolve(logger string) *ResolvedLoggerConfig {
 	loggerConfig := this.Root
-	appenders := make([]Appender, 0, len(this.Appenders))
+	appenderRefs := make([]*AppenderRef, 0, len(this.Appenders))
 	added := make(map[string]bool)
 
 	for _, candidate := range this.Loggers {
@@ -33,36 +33,40 @@ func (this *Configuration) Resolve(logger string) *ResolvedLoggerConfig {
 			loggerConfig = candidate
 		}
 
-		for _, name := range candidate.Appenders {
-			if added[name] {
+		for _, definition := range candidate.AppenderRefs {
+			if added[definition.Ref] {
 				continue
 			}
-			appender := this.Appenders[name]
-			if appender == nil {
+
+			appenderRef := this.resolveAppenderRef(definition)
+			if appenderRef == nil {
 				continue
 			}
-			appenders = append(appenders, appender)
-			added[name] = true
+
+			appenderRefs = append(appenderRefs, appenderRef)
+			added[definition.Ref] = true
 		}
 
 		if !candidate.Additive {
-			return NewResolvedLoggerConfig(loggerConfig.Level, appenders)
+			return NewResolvedLoggerConfig(loggerConfig.Level, appenderRefs)
 		}
 	}
 
-	for _, name := range this.Root.Appenders {
-		if added[name] {
+	for _, definition := range this.Root.AppenderRefs {
+		if added[definition.Ref] {
 			continue
 		}
-		appender := this.Appenders[name]
-		if appender == nil {
+
+		appenderRef := this.resolveAppenderRef(definition)
+		if appenderRef == nil {
 			continue
 		}
-		appenders = append(appenders, appender)
-		added[name] = true
+
+		appenderRefs = append(appenderRefs, appenderRef)
+		added[definition.Ref] = true
 	}
 
-	return NewResolvedLoggerConfig(loggerConfig.Level, appenders)
+	return NewResolvedLoggerConfig(loggerConfig.Level, appenderRefs)
 }
 
 func (this *Configuration) matchesLogger(logger, configured string) bool {
@@ -75,4 +79,15 @@ func (this *Configuration) matchesLogger(logger, configured string) bool {
 	}
 
 	return strings.HasPrefix(logger, configured) && logger[len(configured)] == '/'
+}
+
+func (this *Configuration) resolveAppenderRef(ref *AppenderRef) *AppenderRef {
+	appender := this.Appenders[ref.Ref]
+	if appender == nil {
+		return nil
+	}
+
+	result := *ref
+	result.Appender = appender
+	return &result
 }

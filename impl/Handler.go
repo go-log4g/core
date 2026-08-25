@@ -39,8 +39,10 @@ func (this *Handler) Handle(ctx context.Context, record slog.Record) error {
 	}
 
 	event := NewLogEvent(ctx, record, callerContext, this.attrs, this.groups)
-	for _, appender := range callerContext.Config.Appenders {
-		appender.Append(event)
+	for _, appenderRef := range callerContext.Config.AppenderRefs {
+		if appenderRef.Accept(event) {
+			appenderRef.Appender.Append(event)
+		}
 	}
 
 	return nil

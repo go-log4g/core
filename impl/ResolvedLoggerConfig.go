@@ -3,13 +3,13 @@ package impl
 import "log/slog"
 
 type ResolvedLoggerConfig struct {
-	Level     slog.Level
-	Appenders []Appender
+	Level        slog.Level
+	AppenderRefs []*AppenderRef
 }
 
-func NewResolvedLoggerConfig(level slog.Level, appenders []Appender) *ResolvedLoggerConfig {
+func NewResolvedLoggerConfig(level slog.Level, appenderRefs []*AppenderRef) *ResolvedLoggerConfig {
 	return &ResolvedLoggerConfig{
-		Level:     level,
-		Appenders: appenders,
+		Level:        level,
+		AppenderRefs: appenderRefs,
 	}
 }

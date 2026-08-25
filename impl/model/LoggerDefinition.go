@@ -1,7 +1,7 @@
 package model
 
 type LoggerDefinition struct {
-	Level     string   `yaml:"level"`
-	Appenders []string `yaml:"appenders"`
-	Additive  *bool    `yaml:"additive"`
+	Level        string                   `yaml:"level"`
+	AppenderRefs []*AppenderRefDefinition `yaml:"appenderRefs"`
+	Additive     *bool                    `yaml:"additive"`
 }
