@@ -364,10 +364,10 @@ func (this *ConfigurationBuilder) buildAppenderNode(name string, node *yaml.Node
 	lang.Assert(node.Decode(&header) == nil, "cannot parse appender %q", name)
 	lang.Assert(strings.TrimSpace(header.Type) != "", "appender type is missing for appender %q", name)
 
-	appenderType := strings.ToLower(substitutor.Substitute(header.Type))
+	appenderType := substitutor.Substitute(header.Type)
 
 	switch appenderType {
-	case "console", "file", "rollingfile":
+	case "console", "file", "rollingFile":
 		var definition model.AppenderDefinition
 		lang.Assert(node.Decode(&definition) == nil, "cannot parse appender %q", name)
 		return this.buildAppender(name, definition, parser, substitutor), appenderType
