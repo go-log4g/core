@@ -621,3 +621,27 @@ ctx = mdc.Put(ctx, "requestId", requestId)
 
 Each derived MDC context contains the complete MDC snapshot, so
 subsequent `Put` operations retain previously added values.
+
+## Extension appenders
+
+Additional appender types can be provided by external `go-log4g` modules.
+
+For example, [`go-log4g-shared`](https://github.com/go-log4g/shared) provides the `sharedRollingFile` appender for multiple processes writing to the same rolling log file.
+
+Import the extension package to register its appender:
+
+```go
+import _ "github.com/go-log4g/shared"
+```
+
+It can then be used in the standard Log4g configuration:
+
+```yaml
+appenders:
+  shared:
+    type: sharedRollingFile
+    file: logs/shared.log
+    filePattern: logs/arch/shared-%d{yyyyMMddHHmm}-%i.log.zip
+```
+
+See the `go-log4g-shared` documentation for shared file locking and configuration details.
