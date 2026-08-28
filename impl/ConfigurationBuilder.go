@@ -66,6 +66,7 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 			configuration.PendingAppenders[name] = &PendingAppender{
 				Type:       appenderType,
 				Definition: dynamicDefinition,
+				Builder:    this,
 			}
 		}
 	}
@@ -90,7 +91,7 @@ func parseLevel(value string) slog.Level {
 }
 
 func (this *ConfigurationBuilder) buildAppender(name string, definition model.AppenderDefinition, parser *PatternParser, substitutor *substitution.Substitutor) Appender {
-	appenderType := strings.ToLower(substitutor.Substitute(definition.Type))
+	appenderType := substitutor.Substitute(definition.Type)
 	layout := this.buildLayout(definition.Layout, parser, substitutor)
 	appenderFilter := this.buildFilter(definition.Filter, substitutor)
 
@@ -99,8 +100,8 @@ func (this *ConfigurationBuilder) buildAppender(name string, definition model.Ap
 		return this.buildConsoleAppender(name, definition, layout, appenderFilter, substitutor)
 	case "file":
 		return this.buildFileAppender(name, definition, layout, appenderFilter, substitutor)
-	case "rollingfile":
-		return this.buildRollingFileAppender(name, definition, layout, appenderFilter, substitutor)
+	case "rollingFile":
+		return this.buildRollingFileAppender(name, definition)
 	default:
 		panic(fmt.Sprintf("unsupported appender type %q for appender %q", appenderType, name))
 	}
@@ -142,7 +143,27 @@ func (this *ConfigurationBuilder) buildFileAppender(name string, definition mode
 	return NewFileAppender(file, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger)
 }
 
-func (this *ConfigurationBuilder) buildRollingFileAppender(name string, definition model.AppenderDefinition, layout Layout, appenderFilter filter.Filter, substitutor *substitution.Substitutor) Appender {
+func (this *ConfigurationBuilder) buildRollingFileAppender(name string, definition model.AppenderDefinition) Appender {
+	configuration := this.BuildRollingFileAppenderConfig(name, definition)
+
+	return NewRollingFileAppender(
+		configuration.File,
+		configuration.FilePattern,
+		configuration.Append,
+		configuration.BufferSize,
+		configuration.ImmediateFlush,
+		configuration.Layout,
+		configuration.Filter,
+		configuration.StatusLogger,
+		configuration.StartupPolicy,
+		configuration.TriggerPolicy,
+		configuration.Strategy,
+	)
+}
+
+func (this *ConfigurationBuilder) BuildRollingFileAppenderConfig(name string, definition model.AppenderDefinition) *RollingFileAppenderConfig {
+	patternParser := NewPatternParser(this.statusLogger)
+
 	file := substitutor.Substitute(definition.File)
 	lang.Assert(strings.TrimSpace(file) != "", "file is required for appender %q", name)
 
@@ -165,11 +186,19 @@ func (this *ConfigurationBuilder) buildRollingFileAppender(name string, definiti
 		immediateFlush = *definition.ImmediateFlush
 	}
 
-	startupPolicy := this.buildStartupTriggeringPolicy(definition.Policies, substitutor)
-	triggerPolicy := this.buildTriggeringPolicy(name, definition.Policies, filePattern, substitutor)
-	strategy := this.buildRolloverStrategy(name, definition.DefaultRolloverStrategy, filePattern, substitutor)
-
-	return NewRollingFileAppender(file, filePattern, append, bufferSize, immediateFlush, layout, appenderFilter, this.statusLogger, startupPolicy, triggerPolicy, strategy)
+	return &RollingFileAppenderConfig{
+		File:           file,
+		FilePattern:    filePattern,
+		Append:         append,
+		BufferSize:     bufferSize,
+		ImmediateFlush: immediateFlush,
+		Layout:         this.buildLayout(definition.Layout, patternParser, substitutor),
+		Filter:         this.buildFilter(definition.Filter, substitutor),
+		StatusLogger:   this.statusLogger,
+		StartupPolicy:  this.buildStartupTriggeringPolicy(definition.Policies, substitutor),
+		TriggerPolicy:  this.buildTriggeringPolicy(name, definition.Policies, filePattern, substitutor),
+		Strategy:       this.buildRolloverStrategy(name, definition.DefaultRolloverStrategy, filePattern, substitutor),
+	}
 }
 
 func (this *ConfigurationBuilder) buildStartupTriggeringPolicy(definition model.PoliciesDefinition, substitutor *substitution.Substitutor) *rolling.OnStartupTriggeringPolicy {

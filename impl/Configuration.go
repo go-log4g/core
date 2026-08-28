@@ -102,7 +102,7 @@ func (this *Configuration) ActivatePendingAppenders(appenderType string, factory
 			continue
 		}
 
-		appender := factory(name, pending.Definition)
+		appender := factory(name, pending)
 		lang.Assert(appender != nil, "appender factory returned nil for %q", name)
 
 		this.Appenders[name] = appender

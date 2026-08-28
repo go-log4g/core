@@ -11,11 +11,6 @@ import (
 
 const fileFlushInterval = 5 * time.Second
 
-type fileAppenderDelegate interface {
-	beforeAppend(data []byte)
-	write(data []byte)
-}
-
 type AbstractFileAppender struct {
 	file           string
 	bufferSize     int
@@ -23,7 +18,7 @@ type AbstractFileAppender struct {
 	layout         Layout
 	filter         filter.Filter
 	statusLogger   *StatusLogger
-	delegate       fileAppenderDelegate
+	delegate       FileAppenderDelegate
 
 	writeLock *concurrent.FairLock
 	mutex     sync.Mutex
@@ -35,7 +30,7 @@ type AbstractFileAppender struct {
 	pool      sync.Pool
 }
 
-func newAbstractFileAppender(file string, bufferSize int, immediateFlush bool, layout Layout, filter filter.Filter, statusLogger *StatusLogger, delegate fileAppenderDelegate) *AbstractFileAppender {
+func NewAbstractFileAppender(file string, bufferSize int, immediateFlush bool, layout Layout, filter filter.Filter, statusLogger *StatusLogger, delegate FileAppenderDelegate) *AbstractFileAppender {
 	result := &AbstractFileAppender{
 		file:           file,
 		bufferSize:     bufferSize,
@@ -86,13 +81,15 @@ func (this *AbstractFileAppender) Append(event *LogEvent) {
 	this.writeLock.Lock()
 	defer this.writeLock.Unlock()
 
-	this.delegate.beforeAppend(data)
+	this.delegate.BeforeAppend(data)
 
 	if this.immediateFlush {
-		this.delegate.write(data)
+		this.delegate.Write(data)
 	} else {
 		this.writeBuffered(data)
 	}
+
+	this.delegate.AfterAppend(data)
 }
 
 func (this *AbstractFileAppender) writeBuffered(data []byte) {
@@ -173,7 +170,7 @@ func (this *AbstractFileAppender) writeBuffer(data []byte) {
 		this.statusLogger.ErrorThrottled(this.file, e, "failed to flush log file %q", this.file)
 	})
 
-	this.delegate.write(data)
+	this.delegate.Write(data)
 }
 
 func (this *AbstractFileAppender) runPeriodicFlush() {

@@ -21,19 +21,23 @@ func NewFileAppender(file string, append bool, bufferSize int, immediateFlush bo
 	result := &FileAppender{
 		handle: handle,
 	}
-	result.AbstractFileAppender = newAbstractFileAppender(file, bufferSize, immediateFlush, layout, filter, statusLogger, result)
+	result.AbstractFileAppender = NewAbstractFileAppender(file, bufferSize, immediateFlush, layout, filter, statusLogger, result)
 
 	return result
 }
 
-// Implements fileAppenderDelegate
-func (this *FileAppender) beforeAppend(data []byte) {
+// Implements FileAppenderDelegate
+func (this *FileAppender) BeforeAppend(data []byte) {
 }
 
-// Implements fileAppenderDelegate
-func (this *FileAppender) write(data []byte) {
+// Implements FileAppenderDelegate
+func (this *FileAppender) Write(data []byte) {
 	written := optional.OfCommaErr(this.handle.Write(data)).OrElsePanic("failed to write data to log file %q", this.file)
 	lang.Assert(written == len(data), "failed to write complete data to log file %q", this.file)
+}
+
+// Implements FileAppenderDelegate
+func (this *FileAppender) AfterAppend(data []byte) {
 }
 
 func openLogFile(file string, append bool) *os.File {

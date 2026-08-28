@@ -8,9 +8,10 @@ import (
 )
 
 var configuration *impl.Configuration
+var statusLogger *impl.StatusLogger
 
 func init() {
-	statusLogger := impl.NewStatusLogger()
+	statusLogger = impl.NewStatusLogger()
 	defer err.Recover(func(e any) {
 		statusLogger.Error("Failed to configure Log4g: %v; using default configuration", e)
 		install(impl.NewDefaultConfiguration(), statusLogger)
@@ -20,11 +21,12 @@ func init() {
 	definition := loader.Load()
 
 	builder := impl.NewConfigurationBuilder(statusLogger)
-	configuration = builder.Build(definition)
-	install(configuration, statusLogger)
+	install(builder.Build(definition), statusLogger)
 }
 
-func install(configuration *impl.Configuration, statusLogger *impl.StatusLogger) {
+func install(value *impl.Configuration, statusLogger *impl.StatusLogger) {
+	configuration = value
+
 	callerResolver := impl.NewCallerResolver()
 	callerContextResolver := impl.NewCallerContextResolver(callerResolver, configuration)
 	callerContextCache := impl.NewCallerContextCache(callerContextResolver)
@@ -33,5 +35,10 @@ func install(configuration *impl.Configuration, statusLogger *impl.StatusLogger)
 }
 
 func RegisterAppender(appenderType string, factory impl.AppenderFactory) {
+	defer err.Recover(func(e any) {
+		statusLogger.Error("Failed to configure Log4g: %v; using default configuration", e)
+		install(impl.NewDefaultConfiguration(), statusLogger)
+	})
+
 	configuration.ActivatePendingAppenders(appenderType, factory)
 }

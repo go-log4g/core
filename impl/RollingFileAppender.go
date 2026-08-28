@@ -38,13 +38,12 @@ func NewRollingFileAppender(file string, filePattern string, append bool, buffer
 		strategy:    strategy,
 		size:        size,
 	}
-	result.AbstractFileAppender = newAbstractFileAppender(file, bufferSize, immediateFlush, layout, filter, statusLogger, result)
-
+	result.AbstractFileAppender = NewAbstractFileAppender(file, bufferSize, immediateFlush, layout, filter, statusLogger, result)
 	return result
 }
 
-// Implements fileAppenderDelegate
-func (this *RollingFileAppender) beforeAppend(data []byte) {
+// Implements FileAppenderDelegate
+func (this *RollingFileAppender) BeforeAppend(data []byte) {
 	now := time.Now()
 	context := rolling.TriggeringContext{
 		FileSize:  this.size,
@@ -60,8 +59,8 @@ func (this *RollingFileAppender) beforeAppend(data []byte) {
 	this.size += int64(len(data))
 }
 
-// Implements fileAppenderDelegate
-func (this *RollingFileAppender) write(data []byte) {
+// Implements FileAppenderDelegate
+func (this *RollingFileAppender) Write(data []byte) {
 	if this.failed.Load() {
 		return
 	}
@@ -93,10 +92,12 @@ func (this *RollingFileAppender) rollover(at time.Time) {
 	})
 
 	lang.Assert(this.handle.Close() == nil, "failed to close log file %q", this.file)
-
 	this.strategy.Rollover(this.file, this.filePattern, at)
-
 	this.handle = openLogFile(this.file, false)
 	this.size = 0
 	this.fileTime = time.Now()
+}
+
+// Implements FileAppenderDelegate
+func (this *RollingFileAppender) AfterAppend(data []byte) {
 }
