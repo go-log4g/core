@@ -141,17 +141,24 @@ appenders:
 
 root:
   level: error
-  appenders:
-    - stdout
-    - stderr
-    - file
-    - rollingFile
+  appenderRefs:
+    - ref: stdout
+    - ref: stderr
+    - ref: file
+      level: warn
+    - ref: rollingFile
+      filter:
+        type: threshold
+        level: error
 
 loggers:
-  playground/internal/app:
+  playground/internal:
     level: debug
-
-  github.com/go-beans/go/ioc:
+  playground/internal/network:
+    level: warn
+  github.com/go-beans:
+    level: info
+  github.com/go-external-config:
     level: info
 ```
 
