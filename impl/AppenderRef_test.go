@@ -29,7 +29,7 @@ func TestAppenderRefAcceptFilter(test *testing.T) {
 
 	require.False(test, appenderRef.Accept(logEvent(slog.LevelDebug)))
 	require.True(test, appenderRef.Accept(logEvent(slog.LevelInfo)))
-	require.True(test, appenderRef.Accept(logEvent(slog.LevelWarn)))
+	require.False(test, appenderRef.Accept(logEvent(slog.LevelWarn)))
 	require.False(test, appenderRef.Accept(logEvent(slog.LevelError)))
 }
 

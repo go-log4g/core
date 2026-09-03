@@ -17,7 +17,7 @@ func NewLevelRangeFilter(minLevel, maxLevel slog.Level, onMatch, onMismatch Resu
 }
 
 func (this *LevelRangeFilter) Filter(level slog.Level) Result {
-	if level >= this.minLevel && level <= this.maxLevel {
+	if level >= this.minLevel && level < this.maxLevel {
 		return this.OnMatch
 	}
 	return this.OnMismatch

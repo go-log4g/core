@@ -3,6 +3,7 @@ package impl
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,13 @@ import (
 )
 
 const defaultPattern = "%m%n"
+
+const (
+	LevelAll   = slog.Level(math.MinInt)
+	LevelTrace = slog.Level(-8)
+	LevelFatal = slog.Level(12)
+	LevelOff   = slog.Level(math.MaxInt)
+)
 
 var substitutor = substitution.NewSubstitutor()
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-log4g/core/impl"
 	"github.com/go-log4g/core/log4g"
 	"github.com/go-log4g/core/mdc"
 	"github.com/stretchr/testify/require"
@@ -56,6 +57,10 @@ func TestLevels(test *testing.T) {
 	slog.SetDefault(slog.New(handler))
 	defer slog.SetDefault(original)
 
+	log4g.Trace("Trace")
+	require.Equal(test, impl.LevelTrace, handler.record.Level)
+	require.Equal(test, "Trace", handler.record.Message)
+
 	log4g.Debug("Debug")
 	require.Equal(test, slog.LevelDebug, handler.record.Level)
 	require.Equal(test, "Debug", handler.record.Message)
@@ -71,6 +76,43 @@ func TestLevels(test *testing.T) {
 	log4g.Error("Error")
 	require.Equal(test, slog.LevelError, handler.record.Level)
 	require.Equal(test, "Error", handler.record.Message)
+
+	log4g.Fatal("Fatal")
+	require.Equal(test, impl.LevelFatal, handler.record.Level)
+	require.Equal(test, "Fatal", handler.record.Message)
+}
+
+func TestContextLevels(test *testing.T) {
+	handler := &captureHandler{}
+	original := slog.Default()
+	slog.SetDefault(slog.New(handler))
+	defer slog.SetDefault(original)
+
+	ctx := context.Background()
+
+	log4g.TraceContext(ctx, "Trace")
+	require.Equal(test, impl.LevelTrace, handler.record.Level)
+	require.Equal(test, "Trace", handler.record.Message)
+
+	log4g.DebugContext(ctx, "Debug")
+	require.Equal(test, slog.LevelDebug, handler.record.Level)
+	require.Equal(test, "Debug", handler.record.Message)
+
+	log4g.InfoContext(ctx, "Info")
+	require.Equal(test, slog.LevelInfo, handler.record.Level)
+	require.Equal(test, "Info", handler.record.Message)
+
+	log4g.WarnContext(ctx, "Warn")
+	require.Equal(test, slog.LevelWarn, handler.record.Level)
+	require.Equal(test, "Warn", handler.record.Message)
+
+	log4g.ErrorContext(ctx, "Error")
+	require.Equal(test, slog.LevelError, handler.record.Level)
+	require.Equal(test, "Error", handler.record.Message)
+
+	log4g.FatalContext(ctx, "Fatal")
+	require.Equal(test, impl.LevelFatal, handler.record.Level)
+	require.Equal(test, "Fatal", handler.record.Message)
 }
 
 func TestInfoContext(test *testing.T) {

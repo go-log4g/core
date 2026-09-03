@@ -88,7 +88,6 @@ appenders:
     target: stdout
     filter:
       type: levelRange
-      minLevel: debug
       maxLevel: warn
     layout:
       type: pattern
@@ -98,8 +97,8 @@ appenders:
     type: console
     target: stderr
     filter:
-      type: threshold
-      level: error
+      type: levelRange
+      minLevel: error
     layout:
       type: pattern
       pattern: "${pattern}"
@@ -140,7 +139,7 @@ appenders:
       pattern: "${pattern}"
 
 root:
-  level: error
+  level: warn
   appenderRefs:
     - ref: stdout
     - ref: stderr
@@ -156,17 +155,28 @@ loggers:
     level: debug
   playground/internal/network:
     level: warn
+  playground/internal/auth:
+    level: trace
   github.com/go-beans:
     level: info
   github.com/go-external-config:
     level: info
 ```
 
-This configuration writes `DEBUG` through `WARN` events to `stdout` and
-`ERROR` events to `stderr`. The root level is `ERROR`, while configured
+This configuration writes events below `ERROR` to stdout and `ERROR` 
+and higher events to stderr. The root level is `WARN`, while configured
 logger hierarchies can override or inherit their effective level.
 
 ## Logger levels
+
+Log4g supports the following levels, ordered from lowest to highest severity:
+
+`ALL` < `TRACE` < `DEBUG` < `INFO` < `WARN` < `ERROR` < `FATAL` < `OFF`
+
+`ALL` and `OFF` are configuration boundaries and cannot be used to log events.
+
+Custom slog levels between predefined levels belong to the lower level's range.
+For example, `WARN+1` through `WARN+3` are considered part of the `WARN` range.
 
 Logger levels are inherited hierarchically. A logger without an explicit
 level inherits the level of its nearest configured parent, falling back

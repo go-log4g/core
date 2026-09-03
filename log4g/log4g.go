@@ -11,6 +11,10 @@ import (
 
 var messageFormatter = impl.NewParameterizedMessageFormatter()
 
+func Trace(pattern string, args ...any) {
+	log(context.Background(), impl.LevelTrace, caller(), pattern, args...)
+}
+
 func Debug(pattern string, args ...any) {
 	log(context.Background(), slog.LevelDebug, caller(), pattern, args...)
 }
@@ -27,6 +31,14 @@ func Error(pattern string, args ...any) {
 	log(context.Background(), slog.LevelError, caller(), pattern, args...)
 }
 
+func Fatal(pattern string, args ...any) {
+	log(context.Background(), impl.LevelFatal, caller(), pattern, args...)
+}
+
+func TraceContext(ctx context.Context, pattern string, args ...any) {
+	log(ctx, impl.LevelTrace, caller(), pattern, args...)
+}
+
 func DebugContext(ctx context.Context, pattern string, args ...any) {
 	log(ctx, slog.LevelDebug, caller(), pattern, args...)
 }
@@ -41,6 +53,10 @@ func WarnContext(ctx context.Context, pattern string, args ...any) {
 
 func ErrorContext(ctx context.Context, pattern string, args ...any) {
 	log(ctx, slog.LevelError, caller(), pattern, args...)
+}
+
+func FatalContext(ctx context.Context, pattern string, args ...any) {
+	log(ctx, impl.LevelFatal, caller(), pattern, args...)
 }
 
 func caller() uintptr {

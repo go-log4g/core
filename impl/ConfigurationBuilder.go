@@ -75,21 +75,6 @@ func (this *ConfigurationBuilder) Build(definition *model.ConfigurationDefinitio
 	return configuration
 }
 
-func parseLevel(value string) slog.Level {
-	switch strings.ToUpper(strings.TrimSpace(value)) {
-	case "DEBUG":
-		return slog.LevelDebug
-	case "INFO":
-		return slog.LevelInfo
-	case "WARN":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
-		panic(fmt.Errorf("unsupported log level %q", value))
-	}
-}
-
 func (this *ConfigurationBuilder) buildAppender(name string, definition model.AppenderDefinition, parser *PatternParser, substitutor *substitution.Substitutor) Appender {
 	appenderType := substitutor.Substitute(definition.Type)
 	layout := this.buildLayout(definition.Layout, parser, substitutor)
@@ -298,9 +283,9 @@ func (this *ConfigurationBuilder) buildFilter(definition model.FilterDefinition,
 		level := this.parseRequiredLevel(substitutor.Substitute(definition.Level), "filter.level")
 		return filter.NewThresholdFilter(level, filter.Neutral, filter.Deny)
 	case "levelrange":
-		minLevel := this.parseRequiredLevel(substitutor.Substitute(definition.MinLevel), "filter.minLevel")
-		maxLevel := this.parseRequiredLevel(substitutor.Substitute(definition.MaxLevel), "filter.maxLevel")
-		lang.Assert(minLevel <= maxLevel, "invalid filter level range %q..%q", definition.MinLevel, definition.MaxLevel)
+		minLevel := this.parseOptionalLevel(substitutor.Substitute(definition.MinLevel), LevelAll)
+		maxLevel := nextLevel(this.parseOptionalLevel(substitutor.Substitute(definition.MaxLevel), LevelOff))
+		lang.Assert(minLevel < maxLevel, "invalid filter level range %q..%q", definition.MinLevel, definition.MaxLevel)
 		return filter.NewLevelRangeFilter(minLevel, maxLevel, filter.Neutral, filter.Deny)
 	default:
 		panic(fmt.Sprintf("unsupported filter type %q", filterType))
@@ -309,8 +294,22 @@ func (this *ConfigurationBuilder) buildFilter(definition model.FilterDefinition,
 
 func (this *ConfigurationBuilder) parseRequiredLevel(value, property string) slog.Level {
 	lang.Assert(strings.TrimSpace(value) != "", "missing required %s", property)
+	return parseLevel(value)
+}
 
+func (this *ConfigurationBuilder) parseOptionalLevel(value string, defaultLevel slog.Level) slog.Level {
+	if strings.TrimSpace(value) == "" {
+		return defaultLevel
+	}
+	return parseLevel(value)
+}
+
+func parseLevel(value string) slog.Level {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "ALL":
+		return LevelAll
+	case "TRACE":
+		return LevelTrace
 	case "DEBUG":
 		return slog.LevelDebug
 	case "INFO":
@@ -319,16 +318,43 @@ func (this *ConfigurationBuilder) parseRequiredLevel(value, property string) slo
 		return slog.LevelWarn
 	case "ERROR":
 		return slog.LevelError
+	case "FATAL":
+		return LevelFatal
+	case "OFF":
+		return LevelOff
 	default:
-		panic(fmt.Errorf("unsupported log level %q for %s", value, property))
+		panic(fmt.Errorf("unsupported log level %q", value))
+	}
+}
+
+func nextLevel(level slog.Level) slog.Level {
+	switch level {
+	case LevelAll:
+		return LevelTrace
+	case LevelTrace:
+		return slog.LevelDebug
+	case slog.LevelDebug:
+		return slog.LevelInfo
+	case slog.LevelInfo:
+		return slog.LevelWarn
+	case slog.LevelWarn:
+		return slog.LevelError
+	case slog.LevelError:
+		return LevelFatal
+	case LevelFatal:
+		return LevelOff
+	case LevelOff:
+		return LevelOff
+	default:
+		panic(fmt.Errorf("unsupported log level %q", level))
 	}
 }
 
 func (this *ConfigurationBuilder) rootLevel(definition *model.ConfigurationDefinition, substitutor *substitution.Substitutor) slog.Level {
 	if strings.TrimSpace(definition.Root.Level) != "" {
-		return parseLevel(substitutor.Substitute(definition.Root.Level))
+		return this.parseOptionalLevel(substitutor.Substitute(definition.Root.Level), slog.LevelError)
 	} else if value := substitutor.RootLevel(); value != "" {
-		return parseLevel(value)
+		return this.parseOptionalLevel(value, slog.LevelError)
 	}
 	return slog.LevelError
 }

@@ -13,6 +13,6 @@ func TestLevelRangeFilter(test *testing.T) {
 
 	require.Equal(test, filter.Neutral, value.Filter(slog.LevelDebug))
 	require.Equal(test, filter.Neutral, value.Filter(slog.LevelInfo))
-	require.Equal(test, filter.Neutral, value.Filter(slog.LevelWarn))
+	require.Equal(test, filter.Deny, value.Filter(slog.LevelWarn))
 	require.Equal(test, filter.Deny, value.Filter(slog.LevelError))
 }
