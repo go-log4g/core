@@ -44,36 +44,6 @@ log4g.Info("User {} authenticated", 123)
 log4g.Debug("Loaded {} records in {}", count, elapsed)
 ```
 
-## Testing
-
-Go runs tests with the package directory as the working directory rather
-than the module root. Log4g automatically detects the Go test runner and
-locates the module root by searching parent directories for `go.mod`.
-
-When running tests, configuration is resolved in the following order:
-
-- The file specified by the `--log4g.configurationFile` command-line property
-- The file specified by the `LOG4G_CONFIGURATION_FILE` environment variable
-- `module/config/log4g-test.yaml`
-- `module/log4g-test.yaml`
-- `module/config/log4g.yaml`
-- `module/log4g.yaml`
-
-The first existing configuration file is loaded.
-
-This allows a project to keep a dedicated test configuration without any
-additional test setup:
-
-```text
-config/
-  log4g.yaml
-  log4g-test.yaml
-```
-
-`log4g-test.yaml` is used automatically when running tests, while
-`log4g.yaml` remains the fallback when no test-specific configuration is
-provided.
-
 ## Configuration
 
 Create `config/log4g.yaml`:
@@ -185,6 +155,41 @@ to the root logger.
 If the root logger has no explicit level, `--log4g.level` is used when
 provided, followed by the `LOG4G_LEVEL` environment variable. If none is
 configured, the root level defaults to `ERROR`.
+
+## Logging level checks
+
+The `log4g` facade provides methods to check whether a logging level is enabled for the calling code:
+
+```go
+log4g.TraceEnabled()
+log4g.DebugEnabled()
+log4g.InfoEnabled()
+log4g.WarnEnabled()
+log4g.ErrorEnabled()
+log4g.FatalEnabled()
+```
+
+The generic `log4g.Enabled(level)` method accepts any `slog.Level`.
+
+These methods evaluate the effective logging level of the caller, including inherited logger configuration. Appender filters are not considered.
+
+Level checks are useful when preparing a log message requires expensive computation:
+
+```go
+if log4g.DebugEnabled() {
+    log4g.Debug("Parameters: {}", serializeParameters(parameters))
+}
+```
+
+Without the check, `serializeParameters(parameters)` would execute even when DEBUG logging is disabled.
+
+For ordinary logging, explicit checks are unnecessary:
+
+```go
+log4g.Debug("Processing parameter {}", parameterId)
+```
+
+Log4g automatically filters disabled messages before formatting them.
 
 ## Properties
 
@@ -662,3 +667,33 @@ appenders:
 ```
 
 See the `go-log4g-shared` documentation for shared file locking and configuration details.
+
+## Testing
+
+Go runs tests with the package directory as the working directory rather
+than the module root. Log4g automatically detects the Go test runner and
+locates the module root by searching parent directories for `go.mod`.
+
+When running tests, configuration is resolved in the following order:
+
+- The file specified by the `--log4g.configurationFile` command-line property
+- The file specified by the `LOG4G_CONFIGURATION_FILE` environment variable
+- `module/config/log4g-test.yaml`
+- `module/log4g-test.yaml`
+- `module/config/log4g.yaml`
+- `module/log4g.yaml`
+
+The first existing configuration file is loaded.
+
+This allows a project to keep a dedicated test configuration without any
+additional test setup:
+
+```text
+config/
+  log4g.yaml
+  log4g-test.yaml
+```
+
+`log4g-test.yaml` is used automatically when running tests, while
+`log4g.yaml` remains the fallback when no test-specific configuration is
+provided.

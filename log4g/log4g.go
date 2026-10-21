@@ -59,12 +59,6 @@ func FatalContext(ctx context.Context, pattern string, args ...any) {
 	log(ctx, impl.LevelFatal, caller(), pattern, args...)
 }
 
-func caller() uintptr {
-	var pcs [1]uintptr
-	runtime.Callers(3, pcs[:])
-	return pcs[0]
-}
-
 func log(ctx context.Context, level slog.Level, pc uintptr, pattern string, args ...any) {
 	logger := slog.Default()
 	if !logger.Enabled(ctx, level) {
@@ -73,4 +67,48 @@ func log(ctx context.Context, level slog.Level, pc uintptr, pattern string, args
 
 	record := slog.NewRecord(time.Now(), level, messageFormatter.Format(pattern, args...), pc)
 	_ = logger.Handler().Handle(ctx, record)
+}
+
+func TraceEnabled() bool {
+	return enabled(context.Background(), impl.LevelTrace, caller())
+}
+
+func DebugEnabled() bool {
+	return enabled(context.Background(), slog.LevelDebug, caller())
+}
+
+func InfoEnabled() bool {
+	return enabled(context.Background(), slog.LevelInfo, caller())
+}
+
+func WarnEnabled() bool {
+	return enabled(context.Background(), slog.LevelWarn, caller())
+}
+
+func ErrorEnabled() bool {
+	return enabled(context.Background(), slog.LevelError, caller())
+}
+
+func FatalEnabled() bool {
+	return enabled(context.Background(), impl.LevelFatal, caller())
+}
+
+func Enabled(level slog.Level) bool {
+	return enabled(context.Background(), level, caller())
+}
+
+func enabled(ctx context.Context, level slog.Level, pc uintptr) bool {
+	logger := slog.Default()
+
+	if handler, ok := logger.Handler().(*impl.Handler); ok {
+		return handler.IsEnabled(ctx, level, pc)
+	}
+
+	return logger.Enabled(ctx, level)
+}
+
+func caller() uintptr {
+	var pcs [1]uintptr
+	runtime.Callers(3, pcs[:])
+	return pcs[0]
 }

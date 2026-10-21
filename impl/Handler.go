@@ -23,6 +23,10 @@ func NewHandler(configuration *Configuration, callerContexts *CallerContextCache
 	}
 }
 
+func (this *Handler) IsEnabled(ctx context.Context, level slog.Level, pc uintptr) bool {
+	return this.Enabled(ctx, level) && level >= this.callerContexts.Get(pc).Config.Level
+}
+
 func (this *Handler) Enabled(ctx context.Context, level slog.Level) bool {
 	return level >= this.configuration.MinimumLevel
 }
